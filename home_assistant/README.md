@@ -8,7 +8,7 @@ It talks to Home Assistant through the MQTT broker Home Assistant already uses (
 with MQTT discovery. There is no Home Assistant token to make, no custom integration, and nothing to install
 on the Home Assistant side.
 
-Version 1.0.0, by spacewaffle42. MIT licence. It has no screens of its own: it works in the background.
+Version 1.0.1, by spacewaffle42. MIT licence. It has no screens of its own: it works in the background.
 
 ## What you need
 
@@ -28,7 +28,7 @@ Version 1.0.0, by spacewaffle42. MIT licence. It has no screens of its own: it w
    password from anywhere else: the Matrix hands it to this module's code. With another broker, add a user
    the way that broker does it.
 2. **Import the module.** In the Matrix's dashboard: **Settings > Modules > Import**, then choose
-   `home_assistant-1.0.0.zip` (or paste this repository's GitHub link). The review lists what it asks for:
+   `home_assistant-1.0.1.zip`, or paste the bongo_imports repository's link and tick Home Assistant. The review lists what it asks for:
    to keep working in the background, to see what the panel is doing, to sleep and wake it, to change the
    brightness, to pause and skip, to show short messages, to connect to one device on your home network
    (ports 1883 and 8883), and to keep a password. Tick that you trust the author and install it.
@@ -57,9 +57,9 @@ module is switched off (within about 45 seconds if the power is simply cut).
 
 Things worth knowing:
 
-- **Brightness set from Home Assistant counts as set by hand**: it lasts until the panel next goes to
-  sleep or wakes, and then the Matrix's own brightness takes over again. That is the Matrix's rule for any
-  brightness set by hand.
+- **Brightness set from Home Assistant counts as set by hand**: it stays until you switch back to Auto; with
+  Follow daylight on (Settings > Device) it also ends by itself at the next sunrise, sunset or sleep change.
+  That is the Matrix's rule for any brightness set by hand.
 - **Off from Home Assistant sleeps the panel** until you turn it back on (from Home Assistant, or Wake now
   on the dashboard) or until the Matrix's sleep hours next start or end; with no sleep hours set, for a week.
 - A brightness sent while the panel is asleep and staying asleep is not set (it would not outlast the

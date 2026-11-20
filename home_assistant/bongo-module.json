@@ -1,7 +1,7 @@
 {
   "id": "home_assistant",
   "name": "Home Assistant",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "spacewaffle42",
   "description": "The Matrix appears in Home Assistant by itself (MQTT discovery), through the MQTT broker Home Assistant already uses (its Mosquitto broker, say).",
   "api": 2,
@@ -26,7 +26,7 @@
         ["Pause: on is paused, off is playing", "switch"],
         ["Next screen", "button"],
         ["Show a message (\"Washing done\", \"Doorbell\")", "notify"]]},
-      "note": "A brightness set from Home Assistant counts as set by hand: it lasts until the panel next goes to sleep or wakes. Off from Home Assistant sleeps the panel until you turn it back on or the sleep hours next start or end (a week if there are none). The module only connects to the broker named here."
+      "note": "A brightness set from Home Assistant counts as set by hand: it stays until you switch back to Auto; with Follow daylight on (Settings > Device) it also ends by itself at the next sunrise, sunset or sleep change. Off from Home Assistant sleeps the panel until you turn it back on or the sleep hours next start or end (a week if there are none). The module only connects to the broker named here."
     }
   }
 }
