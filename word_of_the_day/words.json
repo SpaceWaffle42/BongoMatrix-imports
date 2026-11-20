@@ -1,0 +1,512 @@
+[
+ {
+  "word": "petrichor",
+  "kind": "noun",
+  "meaning": "the smell of rain on dry ground"
+ },
+ {
+  "word": "ephemeral",
+  "kind": "adjective",
+  "meaning": "lasting only a very short time"
+ },
+ {
+  "word": "serendipity",
+  "kind": "noun",
+  "meaning": "a happy accident that turns out well"
+ },
+ {
+  "word": "mellifluous",
+  "kind": "adjective",
+  "meaning": "sweet and smooth to listen to"
+ },
+ {
+  "word": "halcyon",
+  "kind": "adjective",
+  "meaning": "of a past time that was calm and happy"
+ },
+ {
+  "word": "gossamer",
+  "kind": "noun",
+  "meaning": "something very light, thin and delicate"
+ },
+ {
+  "word": "ineffable",
+  "kind": "adjective",
+  "meaning": "too great to be put into words"
+ },
+ {
+  "word": "quixotic",
+  "kind": "adjective",
+  "meaning": "full of grand ideas that are not practical"
+ },
+ {
+  "word": "zephyr",
+  "kind": "noun",
+  "meaning": "a soft, gentle breeze"
+ },
+ {
+  "word": "susurrus",
+  "kind": "noun",
+  "meaning": "a low whispering or rustling sound"
+ },
+ {
+  "word": "luminous",
+  "kind": "adjective",
+  "meaning": "giving off light; bright"
+ },
+ {
+  "word": "sonorous",
+  "kind": "adjective",
+  "meaning": "deep, full and rich in sound"
+ },
+ {
+  "word": "ebullient",
+  "kind": "adjective",
+  "meaning": "cheerful and full of energy"
+ },
+ {
+  "word": "lucid",
+  "kind": "adjective",
+  "meaning": "clear and easy to understand"
+ },
+ {
+  "word": "tenacious",
+  "kind": "adjective",
+  "meaning": "holding on firmly; not giving up"
+ },
+ {
+  "word": "verdant",
+  "kind": "adjective",
+  "meaning": "green with growing plants"
+ },
+ {
+  "word": "wanderlust",
+  "kind": "noun",
+  "meaning": "a strong wish to travel"
+ },
+ {
+  "word": "solace",
+  "kind": "noun",
+  "meaning": "comfort in a time of sadness"
+ },
+ {
+  "word": "resplendent",
+  "kind": "adjective",
+  "meaning": "bright, colourful and splendid"
+ },
+ {
+  "word": "nebulous",
+  "kind": "adjective",
+  "meaning": "vague; without a clear shape"
+ },
+ {
+  "word": "pristine",
+  "kind": "adjective",
+  "meaning": "clean and fresh, as if new"
+ },
+ {
+  "word": "jubilant",
+  "kind": "adjective",
+  "meaning": "feeling or showing great joy"
+ },
+ {
+  "word": "candour",
+  "kind": "noun",
+  "meaning": "being open and honest in what you say"
+ },
+ {
+  "word": "aplomb",
+  "kind": "noun",
+  "meaning": "calm confidence in a hard moment"
+ },
+ {
+  "word": "brisk",
+  "kind": "adjective",
+  "meaning": "quick, lively and full of energy"
+ },
+ {
+  "word": "cacophony",
+  "kind": "noun",
+  "meaning": "a harsh mix of loud sounds"
+ },
+ {
+  "word": "dapper",
+  "kind": "adjective",
+  "meaning": "neat and smart in dress"
+ },
+ {
+  "word": "eloquent",
+  "kind": "adjective",
+  "meaning": "able to speak clearly and well"
+ },
+ {
+  "word": "frolic",
+  "kind": "verb",
+  "meaning": "to play about in a lively, happy way"
+ },
+ {
+  "word": "gregarious",
+  "kind": "adjective",
+  "meaning": "fond of being with other people"
+ },
+ {
+  "word": "harbinger",
+  "kind": "noun",
+  "meaning": "a sign that something is coming"
+ },
+ {
+  "word": "idyllic",
+  "kind": "adjective",
+  "meaning": "peaceful, happy and lovely"
+ },
+ {
+  "word": "jovial",
+  "kind": "adjective",
+  "meaning": "cheerful and friendly"
+ },
+ {
+  "word": "kindle",
+  "kind": "verb",
+  "meaning": "to light a fire, or stir up a feeling"
+ },
+ {
+  "word": "labyrinth",
+  "kind": "noun",
+  "meaning": "a maze of winding paths"
+ },
+ {
+  "word": "meander",
+  "kind": "verb",
+  "meaning": "to wander along a winding course"
+ },
+ {
+  "word": "nimble",
+  "kind": "adjective",
+  "meaning": "quick and light in movement or thought"
+ },
+ {
+  "word": "opulent",
+  "kind": "adjective",
+  "meaning": "rich and grand"
+ },
+ {
+  "word": "placid",
+  "kind": "adjective",
+  "meaning": "calm and not easily upset"
+ },
+ {
+  "word": "quench",
+  "kind": "verb",
+  "meaning": "to satisfy thirst, or put out a fire"
+ },
+ {
+  "word": "radiant",
+  "kind": "adjective",
+  "meaning": "shining brightly; glowing"
+ },
+ {
+  "word": "sagacious",
+  "kind": "adjective",
+  "meaning": "wise and showing good judgement"
+ },
+ {
+  "word": "tranquil",
+  "kind": "adjective",
+  "meaning": "free from noise or worry"
+ },
+ {
+  "word": "ubiquitous",
+  "kind": "adjective",
+  "meaning": "found everywhere"
+ },
+ {
+  "word": "vivacious",
+  "kind": "adjective",
+  "meaning": "lively and full of spirit"
+ },
+ {
+  "word": "whimsical",
+  "kind": "adjective",
+  "meaning": "playful in an odd or fanciful way"
+ },
+ {
+  "word": "yonder",
+  "kind": "adverb",
+  "meaning": "over there, at some distance"
+ },
+ {
+  "word": "zenith",
+  "kind": "noun",
+  "meaning": "the highest point"
+ },
+ {
+  "word": "alacrity",
+  "kind": "noun",
+  "meaning": "cheerful readiness to do something"
+ },
+ {
+  "word": "benevolent",
+  "kind": "adjective",
+  "meaning": "kind and wishing to do good"
+ },
+ {
+  "word": "clement",
+  "kind": "adjective",
+  "meaning": "mild, of weather; merciful"
+ },
+ {
+  "word": "diligent",
+  "kind": "adjective",
+  "meaning": "careful and hard-working"
+ },
+ {
+  "word": "effervescent",
+  "kind": "adjective",
+  "meaning": "bubbly; lively and enthusiastic"
+ },
+ {
+  "word": "fathom",
+  "kind": "verb",
+  "meaning": "to understand after much thought"
+ },
+ {
+  "word": "gumption",
+  "kind": "noun",
+  "meaning": "common sense and the courage to act"
+ },
+ {
+  "word": "hearth",
+  "kind": "noun",
+  "meaning": "the floor of a fireplace; the heart of a home"
+ },
+ {
+  "word": "intrepid",
+  "kind": "adjective",
+  "meaning": "fearless and adventurous"
+ },
+ {
+  "word": "juxtapose",
+  "kind": "verb",
+  "meaning": "to place side by side for contrast"
+ },
+ {
+  "word": "kindred",
+  "kind": "adjective",
+  "meaning": "alike in nature or character"
+ },
+ {
+  "word": "lithe",
+  "kind": "adjective",
+  "meaning": "slim, supple and graceful"
+ },
+ {
+  "word": "mirth",
+  "kind": "noun",
+  "meaning": "laughter and good humour"
+ },
+ {
+  "word": "nostalgia",
+  "kind": "noun",
+  "meaning": "a fond longing for the past"
+ },
+ {
+  "word": "oblique",
+  "kind": "adjective",
+  "meaning": "slanting; not said directly"
+ },
+ {
+  "word": "panacea",
+  "kind": "noun",
+  "meaning": "a cure for every problem"
+ },
+ {
+  "word": "quaint",
+  "kind": "adjective",
+  "meaning": "charmingly old-fashioned"
+ },
+ {
+  "word": "reverie",
+  "kind": "noun",
+  "meaning": "a pleasant daydream"
+ },
+ {
+  "word": "stalwart",
+  "kind": "adjective",
+  "meaning": "loyal, reliable and hard-working"
+ },
+ {
+  "word": "trove",
+  "kind": "noun",
+  "meaning": "a store of valuable things"
+ },
+ {
+  "word": "umbrage",
+  "kind": "noun",
+  "meaning": "offence or annoyance"
+ },
+ {
+  "word": "vestige",
+  "kind": "noun",
+  "meaning": "a small trace of something now gone"
+ },
+ {
+  "word": "wistful",
+  "kind": "adjective",
+  "meaning": "sadly longing for something"
+ },
+ {
+  "word": "yearn",
+  "kind": "verb",
+  "meaning": "to want something very much"
+ },
+ {
+  "word": "zest",
+  "kind": "noun",
+  "meaning": "great enjoyment and energy"
+ },
+ {
+  "word": "ardent",
+  "kind": "adjective",
+  "meaning": "very eager and full of feeling"
+ },
+ {
+  "word": "bucolic",
+  "kind": "adjective",
+  "meaning": "to do with pleasant country life"
+ },
+ {
+  "word": "convivial",
+  "kind": "adjective",
+  "meaning": "friendly, lively and good company"
+ },
+ {
+  "word": "dulcet",
+  "kind": "adjective",
+  "meaning": "sweet and soothing to hear"
+ },
+ {
+  "word": "equanimity",
+  "kind": "noun",
+  "meaning": "calmness, even under strain"
+ },
+ {
+  "word": "fortitude",
+  "kind": "noun",
+  "meaning": "courage in pain or trouble"
+ },
+ {
+  "word": "glimmer",
+  "kind": "noun",
+  "meaning": "a faint, wavering light"
+ },
+ {
+  "word": "hale",
+  "kind": "adjective",
+  "meaning": "strong and healthy"
+ },
+ {
+  "word": "incandescent",
+  "kind": "adjective",
+  "meaning": "glowing with heat; brilliant"
+ },
+ {
+  "word": "jaunty",
+  "kind": "adjective",
+  "meaning": "lively, cheerful and confident"
+ },
+ {
+  "word": "keen",
+  "kind": "adjective",
+  "meaning": "eager; sharp"
+ },
+ {
+  "word": "lilt",
+  "kind": "noun",
+  "meaning": "a gentle rise and fall in a voice or tune"
+ },
+ {
+  "word": "magnanimous",
+  "kind": "adjective",
+  "meaning": "generous, above all to a rival"
+ },
+ {
+  "word": "nascent",
+  "kind": "adjective",
+  "meaning": "just beginning to exist"
+ },
+ {
+  "word": "ostensible",
+  "kind": "adjective",
+  "meaning": "appearing true, but perhaps not so"
+ },
+ {
+  "word": "perspicacious",
+  "kind": "adjective",
+  "meaning": "quick to notice and understand"
+ },
+ {
+  "word": "quiescent",
+  "kind": "adjective",
+  "meaning": "quiet and still for a time"
+ },
+ {
+  "word": "rapport",
+  "kind": "noun",
+  "meaning": "a close, easy understanding between people"
+ },
+ {
+  "word": "scintilla",
+  "kind": "noun",
+  "meaning": "a tiny trace or spark"
+ },
+ {
+  "word": "temerity",
+  "kind": "noun",
+  "meaning": "reckless boldness"
+ },
+ {
+  "word": "unfurl",
+  "kind": "verb",
+  "meaning": "to spread out from being rolled up"
+ },
+ {
+  "word": "verve",
+  "kind": "noun",
+  "meaning": "energy and style"
+ },
+ {
+  "word": "winsome",
+  "kind": "adjective",
+  "meaning": "charming in a fresh, simple way"
+ },
+ {
+  "word": "yoke",
+  "kind": "verb",
+  "meaning": "to join together"
+ },
+ {
+  "word": "zany",
+  "kind": "adjective",
+  "meaning": "amusingly odd"
+ },
+ {
+  "word": "amble",
+  "kind": "verb",
+  "meaning": "to walk at a slow, easy pace"
+ },
+ {
+  "word": "burnish",
+  "kind": "verb",
+  "meaning": "to polish by rubbing"
+ },
+ {
+  "word": "cosy",
+  "kind": "adjective",
+  "meaning": "warm, snug and comfortable"
+ },
+ {
+  "word": "dawdle",
+  "kind": "verb",
+  "meaning": "to waste time; to move slowly"
+ }
+]

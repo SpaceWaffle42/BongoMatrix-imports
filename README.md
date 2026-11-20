@@ -9,8 +9,12 @@ Python, any `art` (Animator projects), a README, CHANGELOG and LICENSE. The vers
 | Folder | Module | What it is |
 |---|---|---|
 | `aquarium/` | Aquarium | A tank of fish to leave alone or play with: feed, tap the glass, add or remove a fish |
+| `crypto_ticker/` | Crypto ticker | Coin prices on the panel |
 | `home_assistant/` | Home Assistant | Your Home Assistant's states and alerts on the panel |
+| `iss_tracker/` | ISS Tracker | Where the International Space Station is now |
+| `pomodoro/` | Pomodoro | A focus timer: work and break rounds |
 | `sports/` | Sports | Live scores and fixtures |
+| `word_of_the_day/` | Word of the day | A new word and its meaning each day |
 
 ## Making the .zip to import
 

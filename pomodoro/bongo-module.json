@@ -1,0 +1,7 @@
+{
+  "id": "pomodoro",
+  "name": "Pomodoro",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "A focus timer for the whole room: 25 minutes of work, 5 of break, round the clock."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "iss_tracker",
+  "name": "ISS Tracker",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Where the International Space Station is right now: on a world map, as numbers, or how far it is from you.",
+  "network": ["api.wheretheiss.at"]
+}

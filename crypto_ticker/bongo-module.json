@@ -1,0 +1,8 @@
+{
+  "id": "crypto_ticker",
+  "name": "Crypto Ticker",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Prices for the coins you pick, with the day's change and a week's chart. Information only, not advice.",
+  "network": ["api.coingecko.com"]
+}
