@@ -1,0 +1,14 @@
+{
+  "id": "sports",
+  "name": "Sports",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Your football team: next match, live score, result and league table. Needs your own key from football-data.org or TheSportsDB.",
+  "network": [
+    "api.football-data.org",
+    "www.thesportsdb.com"
+  ],
+  "abilities": {
+    "stay": true
+  }
+}

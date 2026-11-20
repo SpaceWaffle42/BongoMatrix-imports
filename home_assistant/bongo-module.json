@@ -1,0 +1,32 @@
+{
+  "id": "home_assistant",
+  "name": "Home Assistant",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "The Matrix appears in Home Assistant by itself (MQTT discovery), through the MQTT broker Home Assistant already uses (its Mosquitto broker, say).",
+  "api": 2,
+  "abilities": {
+    "background": true,
+    "controls": ["status", "sleep", "brightness", "playback", "message"],
+    "home_address": {"label": "Broker address", "ports": [1883, 8883]},
+    "settings": {
+      "fields": [
+        {"name": "username", "type": "text", "label": "Username", "max": 64},
+        {"name": "password", "type": "text", "label": "Password", "max": 128},
+        {"name": "secure", "type": "bool", "label": "Encrypted (TLS)", "default": false,
+         "note": "For the broker's encrypted port (8883). Off, the password crosses your home network in the clear."},
+        {"name": "fingerprint", "type": "text", "label": "Certificate fingerprint", "max": 100,
+         "note": "Optional, SHA-256. Without it the connection is encrypted but the broker's certificate isn't checked."},
+        {"name": "name", "type": "text", "label": "Name in Home Assistant", "max": 40, "default": "Bongo Matrix",
+         "note": "Give each Matrix its own name if you have more than one."}
+      ],
+      "table": {"title": "What Home Assistant gets", "rows": [
+        ["Panel: on is awake, off is asleep; with brightness", "light"],
+        ["Screen now playing", "sensor"],
+        ["Pause: on is paused, off is playing", "switch"],
+        ["Next screen", "button"],
+        ["Show a message (\"Washing done\", \"Doorbell\")", "notify"]]},
+      "note": "A brightness set from Home Assistant counts as set by hand: it lasts until the panel next goes to sleep or wakes. Off from Home Assistant sleeps the panel until you turn it back on or the sleep hours next start or end (a week if there are none). The module only connects to the broker named here."
+    }
+  }
+}

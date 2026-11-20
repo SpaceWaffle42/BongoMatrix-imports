@@ -1,0 +1,4 @@
+{"format":"bongo-animation","version":1,"name":"deep_jelly","width":5,"height":7,"background":"#000000","loop":"loop","palette":["#ff00ff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":350,"cels":[". 3*0 . 11*0 . 0 . 2*0 . 0 . 0 . 0 . 0 6*."]},
+{"ms":350,"cels":["6*. 3*0 . 10*0 . 0 . 0 2*. 0 . 0 . 0 . 0 . 0"]}
+]}

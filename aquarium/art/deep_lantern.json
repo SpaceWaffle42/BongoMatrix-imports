@@ -1,0 +1,4 @@
+{"format":"bongo-animation","version":1,"name":"deep_lantern","width":5,"height":3,"background":"#000000","loop":"loop","palette":["#2c3852","#4e6084","#ebf0ff","#ff00ff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":350,"cels":["0 . 2*1 . 0 1 3 1 2 0 . 2*1 ."]},
+{"ms":350,"cels":["2*. 2*1 2*. 0 3 1 2 2*. 2*1 ."]}
+]}

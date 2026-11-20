@@ -1,0 +1,4 @@
+{"format":"bongo-animation","version":1,"name":"reef_clown","width":9,"height":5,"background":"#000000","loop":"loop","palette":["#0a0a18","#d75a14","#ff8c28","#ffffff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":350,"cels":["1 2*. 4*2 2*. 2*1 2*2 3 3*2 . 2*1 2*2 3 2*2 0 2 2*1 2*2 3 3*2 . 1 2*. 4*2 2*."]},
+{"ms":350,"cels":["3*. 4*2 3*. 1 2*2 3 3*2 . 2*1 2*2 3 2*2 0 2 . 1 2*2 3 3*2 4*. 4*2 2*."]}
+]}
