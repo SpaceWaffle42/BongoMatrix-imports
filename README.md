@@ -56,7 +56,9 @@ Each module's own README says how to set it up.
    - it isn't GitHub: only import from a place you run or trust, because a module's code runs on the Matrix
      (inside its sandbox);
    - the address is on your home network;
-   - the address isn't encrypted (http): someone on your network could change what's downloaded.
+   - the address isn't encrypted (http): someone on your network could change what's downloaded;
+   - with an access token typed (below), that token is sent as plain text over http, where anyone on your
+     network could read it.
    Tick that you understand, then **Fetch**.
 4. **Pick the modules.** Because this repository holds several modules, a list pops up with every module found:
    its name, version, author, what it does, what it asks for, and whether it's already on this Matrix (and if so,
