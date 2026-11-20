@@ -1,4 +1,4 @@
-{"format":"bongo-animation","version":1,"name":"reef_puffer","width":8,"height":8,"background":"#000000","loop":"loop","palette":["#0a0a18","#d25082","#ff82b4"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
-{"ms":350,"cels":["1 . 4*2 . 1 . 6*2 . 13*2 0 18*2 . 6*2 . 1 . 4*2 . 1"]},
-{"ms":350,"cels":["2*. 4*2 2*. 1 6*2 1 13*2 0 18*2 1 6*2 1 2*. 4*2 2*."]}
+{"format":"bongo-animation","version":1,"name":"reef_puffer","width":8,"height":8,"background":"#000000","loop":"loop","palette":["#0a0a18","#ca5789","#d25082","#dc6597","#ed74a6","#ff82b4","#ff96c0","#ffa9cc","#ffbdd8","#ffd0e4","#ffe8f2","#ffffff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":350,"cels":["2 3*. 2 2*. 2 3*. 3*8 4*. 4*7 a 2*. 6 2 3*6 0 6 2 6*5 9 . 4 2 2*4 2 2*4 2*. 3 2 3*3 . 2 2*. 3*1 . 2"]},
+{"ms":350,"cels":["2 3*. 2 2*. 2 3*. 3*8 4*. 4*7 a 2*. 6 2 3*6 0 6 2 6*5 b . 4 2 2*4 2 2*4 2*. 3 2 3*3 . 2 2*. 3*1 . 2"]}
 ]}

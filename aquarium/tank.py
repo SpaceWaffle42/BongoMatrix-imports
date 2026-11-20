@@ -3,7 +3,8 @@
 The fish themselves live in ``world.py`` (how they move) and are remembered by ``keep.py`` (which ones
 there are). This file draws them, and passes on what a person asks for.
 
-The water, the weed and the bubbles are worked out from the time alone. The fish are different: they
+The scenery (water, seabed, rocks, weed: ``scenery.py``, drawn in the Animator) and the bubbles are worked
+out from the time alone; the scenery loops, so each frame of it is put together once and then just shown. The fish are different: they
 turn and chase food, so they have places of their own that move on a little each frame. One tank is
 shared by every screen of the same look, size and starting number of fish, and it lasts as long as
 the module is running, so the fish are where you left them when the Aquarium's turn comes round again.
@@ -19,7 +20,7 @@ from PIL import ImageColor
 
 from bongo.module import Style
 
-from . import keep, sprites
+from . import art, keep, scenery, sprites
 from .world import FLAKE_LIFE, World
 
 WORLDS = {}             # (tank's name, width, height) -> the tank on the panel
@@ -28,10 +29,6 @@ SETTLE = 0.7            # s between one fish and the next when the number of fis
 DIVE = 4.0              # s to sink from the Reef down to the Deep (or rise back up) when one follows the other
 LAST = {}               # the Aquarium screen last on the panel: {"tank": that screen, "at": when it last drew}
 CREAM, CORAL, AMBER = (255, 210, 110), (255, 120, 90), (255, 190, 80)
-
-
-def shade(colour, by):
-    return tuple(max(0, min(255, int(c * by))) for c in colour)
 
 
 def blend(a, b, by):
@@ -72,7 +69,6 @@ class _Tank(Style):
         self.sizes = {name: (s.width, s.height) for name, s in self.kinds.items()}
         self.own = None                          # a tank of this screen's own, for previews at made-up times
         self.seed = rng.getrandbits(32)
-        self.streams = [(rng.randrange(2, max(3, w - 2)), rng.uniform(4, 9), rng.uniform(0, 40)) for _ in range(3)]
         self.passing = [(rng.randrange(w), rng.random()) for _ in range(10)]   # what drifts past on the way down
         self.came_from = None                    # (the other look's screen, when this one came on): diving or rising
         self.first = True
@@ -89,10 +85,18 @@ class _Tank(Style):
         pass
 
     def water(self, img, t):
-        pass
+        """Behind the fish: the water and everything in it (a frame of the scenery)."""
+        img.paste(self.scenery.back.at(t))
 
     def front(self, img, t):
-        pass
+        """In front of the fish: the bubbles (if ``bubbles`` is on), the front scenery and the light it gives."""
+        if self.scenery.front is not None:
+            over = self.scenery.front.at(t)
+            img.paste(over, (0, 0), over)
+        if self.scenery.front_light is not None:
+            light = self.scenery.front_light.at(t)
+            if light is not None:
+                art.add(img, light)
 
     def flake(self, img, flake, t, fade):
         pass
@@ -193,17 +197,6 @@ class _Tank(Style):
                 x += f.direction
             self.kinds[f.kind].draw(img, x, y, f.direction, int(t * 3 + f.phase), scared=t < f.scared_until)
 
-    def bubbles(self, img, t, colour):
-        if not self.settings["bubbles"]:
-            return
-        w, h = self.ctx.width, self.ctx.height
-        for x0, speed, offset in self.streams:
-            for n in range(3):                                                # three bubbles to a stream
-                up = (t * speed + offset + n * (h + 6) / 3) % (h + 6)
-                x, y = x0 + round(math.sin(up / 3 + n)), h - self.floor() - round(up)
-                if 0 <= x < w and 0 <= y < h:
-                    img.putpixel((x, y), colour)
-
     def scene(self, now):
         """This look at ``now``, fish and all."""
         img = self.ctx.canvas()
@@ -246,12 +239,13 @@ class _Tank(Style):
         w, h = self.ctx.width, self.ctx.height
         p = p * p * (3 - 2 * p)                                  # gently away, gently to a stop
         reef, deep = (before, after) if isinstance(self, Deep) else (after, before)
+        reef_tank, deep_tank = (self.came_from[0], self) if isinstance(self, Deep) else (self, self.came_from[0])
         down = isinstance(self, Deep)
         gap = h                                                  # the water between the two
         travel = h + gap
         y = round((p if down else 1 - p) * travel)               # how far down the column the view is
-        shallow = (self if isinstance(self, Reef) else self.came_from[0]).rows[-1]   # the reef's deepest water...
-        top = (0, 8, 22)                                         # ...to the very top of the Deep (Deep.water, row 0)
+        shallow = reef_tank.rows[-1]                             # the reef's deepest water...
+        top = deep_tank.rows[0]                                  # ...to the very top of the Deep
         img = self.ctx.canvas()
         img.paste(reef, (0, -y))
         for row in range(gap):                                   # the reef's water fading into the deep's
@@ -272,36 +266,25 @@ class _Tank(Style):
 class Reef(_Tank):
     """Sunlit water, sand, swaying weed and bright fish."""
     prefix = "reef_"
-    defaults = {"water": "#0A3A66"}
+    defaults = {"water": "#2A8AC8"}
+    OLD_DEFAULT = "#0A3A66"                # 2.4.0's default water, too dark for the new scenery: drawn as the new one
 
     def floor(self):
-        return 2 if self.ctx.height >= 12 else 0
+        """Rows at the bottom the fish keep out of. Under ``scenery.LOW`` tall the scenery keeps low and the
+        fish keep above it, in clear water."""
+        h = self.ctx.height
+        if h >= scenery.LOW:
+            return 4
+        return min(h // 2, max(4, round((h - 7) * 0.5)) + 1) if h >= 12 else 0
+
+    def colour(self):
+        """The water's colour: the setting, except 2.4.0's default (saved as it was) is the new default."""
+        chosen = self.settings["water"]
+        return ImageColor.getrgb(self.defaults["water"] if chosen.strip().upper() == self.OLD_DEFAULT else chosen)
 
     def prepare(self, rng):
-        w, h = self.ctx.width, self.ctx.height
-        top = ImageColor.getrgb(self.settings["water"])
-        self.rows = [shade(top, 1.0 - 0.75 * y / max(1, h - 1)) for y in range(h)]     # lighter near the surface
-        self.speckles = {rng.randrange(w) for _ in range(w // 4)}
-        self.weed = [(rng.randrange(1, max(2, w - 1)), rng.randrange(4, max(5, h // 2)), rng.uniform(0, 6)) for _ in range(max(2, w // 14))]
-
-    def water(self, img, t):
-        w, h = self.ctx.width, self.ctx.height
-        px = img.load()
-        for y in range(h):
-            for x in range(w):
-                px[x, y] = self.rows[y]
-        for x, tall, phase in self.weed:                     # weed first: the fish swim in front of it
-            for k in range(tall):
-                sway = round(math.sin(t * 1.1 + phase + k * 0.6) * min(1.5, k / 3))
-                y = h - self.floor() - 1 - k
-                if 0 <= x + sway < w and y >= 0:
-                    px[x + sway, y] = (30, 150, 70) if k % 2 else (40, 185, 90)
-        for y in range(h - self.floor(), h):
-            for x in range(w):
-                px[x, y] = (214, 190, 120) if (x in self.speckles) == (y == h - 1) else (190, 164, 100)
-
-    def front(self, img, t):
-        self.bubbles(img, t, (190, 225, 255))
+        self.scenery = scenery.scene("reef", self.ctx.width, self.ctx.height, water=self.colour(), bubbles=self.settings["bubbles"])
+        self.rows = self.scenery.rows          # the water's colour row by row (the dive starts from the last)
 
     def flake(self, img, flake, t, fade):
         """A flake of food: two LEDs wide while it flutters down (a bubble is one), one once it has settled."""
@@ -333,23 +316,13 @@ class Deep(_Tank):
     def glow(self):
         return ImageColor.getrgb(self.settings["glow"])
 
+    def floor(self):
+        return 3 if self.ctx.height >= 20 else 1 if self.ctx.height >= 12 else 0
+
     def prepare(self, rng):
-        w, h = self.ctx.width, self.ctx.height
-        self.specks = [(rng.randrange(w), rng.randrange(h), rng.uniform(0, 6), rng.uniform(0.4, 1.2)) for _ in range(max(3, w * h // 170))]
+        self.scenery = scenery.scene("deep", self.ctx.width, self.ctx.height, glow=self.glow(), bubbles=self.settings["bubbles"])
+        self.rows = self.scenery.rows          # the water's colour row by row (the dive ends at the first)
 
-    def water(self, img, t):
-        w, h = self.ctx.width, self.ctx.height
-        px = img.load()
-        for y in range(h):
-            row = (0, 2 + 6 * (h - y) // h, 8 + 14 * (h - y) // h)
-            for x in range(w):
-                px[x, y] = row
-        glow = self.glow()
-        for x, y, phase, beat in self.specks:                # specks that brighten and fade where they are
-            px[x, y] = shade(glow, 0.12 + 0.3 * (0.5 + 0.5 * math.sin(t * beat + phase)))
-
-    def front(self, img, t):
-        self.bubbles(img, t, shade(self.glow(), 0.45))
 
     def flake(self, img, flake, t, fade):
         x, y = round(flake.x), round(flake.y)

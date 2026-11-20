@@ -9,7 +9,8 @@ glass (they dart away), and drop a fish in or let one swim off. None of it is ne
 hungry and nothing has to be looked after.
 
 Where to look:
-- ``art.py``: the pictures, which are Animator projects in the ``art`` folder; ``sprites.py`` readies the fish.
+- ``art.py``: the pictures, which are Animator projects in the ``art`` folder; ``sprites.py`` readies the fish;
+  ``scenery.py`` puts the water, seabed, rocks and weed together for each size.
 - ``world.py``: how the fish move (no drawing).
 - ``tank.py``: drawing the two looks, and the dashboard's buttons (``act``).
 - ``keep.py``: remembering which fish there are, and when food last dropped in, in a small file.
@@ -20,7 +21,7 @@ from bongo.module import Module
 from .tank import Deep, Reef
 
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
 
 BUTTONS = {"feed": "Feed now", "tap": "Tap the glass", "add": "Add a fish", "remove": "Remove a fish"}
 

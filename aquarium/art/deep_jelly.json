@@ -1,4 +1,4 @@
-{"format":"bongo-animation","version":1,"name":"deep_jelly","width":5,"height":7,"background":"#000000","loop":"loop","palette":["#ff00ff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
-{"ms":350,"cels":[". 3*0 . 11*0 . 0 . 2*0 . 0 . 0 . 0 . 0 6*."]},
-{"ms":350,"cels":["6*. 3*0 . 10*0 . 0 . 0 2*. 0 . 0 . 0 . 0 . 0"]}
+{"format":"bongo-animation","version":1,"name":"deep_jelly","width":5,"height":7,"background":"#000000","loop":"loop","palette":["#400040","#570057","#660066","#7a007a","#800080","#8c008c","#9e009e","#bf00bf","#d900d9","#e600e6","#ff00ff"],"layers":[{"name":"Fish","on":true,"opacity":1,"mode":"normal","shared":false},{"name":"Glow","on":true,"opacity":1,"mode":"light","shared":false}],"frames":[
+{"ms":350,"cels":[". 9 a 9 . 7 8 a 8 6*7 . 4 5 4 2*. 6 . 6 . 3 . 3 . 3 1 . 1 2*.","12*. 2 22*."]},
+{"ms":350,"cels":[". 9 a 9 . 7 8 a 8 6*7 . 4 5 4 . 6 . 6 . 6 . 3 . 3 2*. 1 . 1 .","12*. 0 22*."]}
 ]}
