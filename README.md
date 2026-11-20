@@ -76,7 +76,7 @@ straight to the review, as before.
 
 So the Matrix needs a sign-in to fetch it. Make a **read-only** access token in GitLab: on this project,
 **Settings › Access tokens**, role Reporter, scope `read_repository` (add `read_api` so the Matrix can see the
-default branch and tags; without it, it tries `main`). Paste it into the **Access token** box on the import. The
+default branch and tags; without it, it tries `main`, then `master`). Paste it into the **Access token** box on the import. The
 token is used only to download from this GitLab and to check it for updates. It is kept like the Matrix's other
 secrets (never in its settings file, the logs, a backup, a link or the hub) and is sent only to this same address.
 Removing the last module that came from here forgets it.
@@ -108,8 +108,8 @@ updates from that folder only:
 - against the newest **tag** if the repository has tags, otherwise the latest commit of the branch it came from;
 - only a module whose own `version` in `bongo-module.json` went up shows an update (a tag for one module doesn't
   make the others look new);
-- a newer version shows a badge on the module's row in Settings › Modules. **Nothing installs by itself**:
-  press Update, see the review again, and agree;
+- a newer version shows an **Update** button on the module's row in Settings › Modules. **Nothing installs by
+  itself**: press Update, see the review again, and agree;
 - if the new version asks for anything new (a new ability, a new site), you're asked again before it installs.
 
 ## Adding or changing a module here
@@ -137,8 +137,8 @@ updates from that folder only:
    - `api`: the Matrix contract it needs, if it uses abilities (an older Matrix then says it needs updating instead
      of half-working).
 3. **Bump `version`** in that module's `bongo-module.json` for every change you want Matrices to pick up, and say
-   what changed in its CHANGELOG. Then push to the branch the Matrices follow (`main`), or tag the repository
-   (for example `sports-1.1.0`).
+   what changed in its CHANGELOG. Then push to `main`. If the repository has any tags, Matrices follow the
+   newest tag only, so also tag it (for example `sports-1.1.0`); a push to `main` alone isn't picked up then.
 4. **Never commit a secret**: no API keys, tokens, passwords or private links, in code, tests or examples. Each
    person types their own into the Matrix.
 5. **Test before pushing**: try the module on a Matrix (import it as a .zip, or by link from a branch), and run
