@@ -158,29 +158,66 @@ class Page:
         else:                          # one
             self.top, self.bottom, self.centre, room = None, None, (H - 1) // 2, H - 2
         self.mids = [f for f in self.fonts if f[2] <= room] or self.fonts[-1:]
+        self.one_line = self.top is None and self.bottom is None
 
     # -- text -------------------------------------------------------------------------------------------------
-    def fit(self, words, fonts, width):
+    def fit(self, words, fonts, width=None):
         """(font, text) for a line. ``words`` is the text, or several ways of saying it, longest first: the first
-        that fits ``width`` in one of ``fonts`` (biggest first) is used, so a narrow panel gets fewer words, never
-        cut ones. If none fits, the line is left out ("")."""
+        that fits ``width`` (the line's room, inside the margins) in one of ``fonts`` (biggest first) is used, so a
+        narrow panel gets fewer words, never cut ones. If none fits, the line is left out ("")."""
+        width = self.room if width is None else width
         options = [words] if isinstance(words, str) else list(words)
-        for text in options:
-            for font in fonts:
-                if font.width(text) <= width:
-                    return font, text
+        for room in (width, width + 2 * MARGIN) if self.W < NARROW and width == self.room else (width,):
+            for text in options:             # (a narrow panel: first every wording inside the margins, then to the edges)
+                for font in fonts:
+                    if font.width(text) <= room:
+                        return font, text
         return fonts[-1], ""
 
-    def line(self, baseline, words, colour):
-        """Words centred on a row of small type (see ``fit``)."""
-        if baseline is None or not words:
+    def centred(self, font, text, baseline, colour, left=0, mark=None):
+        """Draw ``text`` centred in the room right of ``left`` (inside the margins). ``mark``: a colour for the one
+        word of it that starts with ">" (a player picked out), the rest staying ``colour``."""
+        x0, x1 = MARGIN + left, self.W - MARGIN
+        if font.width(text) > x1 - x0:       # (only on a narrow panel: see ``fit``)
+            x0, x1 = left, self.W
+        x = x0 + max(0, (x1 - x0 - font.width(text) + 1) // 2)
+        font.draw(self.img, x, baseline, text, colour)
+        if mark is not None and ">" in text:
+            at = text.index(">")
+            end = text.find(" ", at)
+            word = text[at:] if end < 0 else text[at:end]
+            font.draw(self.img, x + font.width(text[:at]), baseline, word, mark)
+        return x
+
+    def line(self, baseline, words, colour, icon=None, mark=None):
+        """Words centred on a row of small type (see ``fit``). ``icon`` (an RGBA picture): at the left of the top
+        line, with the words centred in the room beside it; if no wording fits beside it, the icon is left out
+        (unless no wording fits at all: then the icon alone)."""
+        if baseline is None or (not words and icon is None):
             return
-        font, text = self.fit(words, [self.tiny], self.W)
-        font.draw(self.img, max(0, (self.W - font.width(text) + 1) // 2), baseline, text, colour)
+        if icon is not None and baseline == self.top and icon.height <= baseline + 1 and self.H >= 26:   # (a dark row under it)
+            beside = icon.width + 2
+            font, text = self.fit(words or "", [self.tiny], self.room - beside)
+            if text or not words or not self.fit(words, [self.tiny])[1]:
+                self.img.paste(icon, (MARGIN, max(0, baseline - icon.height + 1)), icon)
+                if text:
+                    self.centred(font, text, baseline, colour, beside, mark)
+                return
+        if not words:
+            return
+        font, text = self.fit(words, [self.tiny])
+        if text:
+            self.centred(font, text, baseline, colour, mark=mark)
 
     def base(self, ink):
         """The baseline that centres a row of this height in the big row's band."""
         return self.centre + ink // 2
+
+    def turn(self, *lines):
+        """On a one-line panel: which of several lines (each words and a colour) has the line now. Empty ones,
+        and ones with no wording short enough for the panel, are skipped."""
+        lines = [(w, c) for w, c in lines if w and self.fit(w, [f for _, f, _ in self.mids])[1]]
+        return lines[_tick[0] % len(lines)] if lines else ("", TEXT)
 
     # -- the two kits -----------------------------------------------------------------------------------------
     def kits(self, width, home, away):
@@ -203,10 +240,12 @@ class Page:
                     self.kits(stripe, home["colours"], away["colours"])
                     font.draw(self.img, (self.W - font.width(text) + 1) // 2, self.base(ink), text, colour)
                     return
-        font, text = self.fit((text, f"{home['code']}-{away['code']}"), [f for _, f, _ in self.mids], self.W)
+        font, text = self.fit((text, f"{home['code']}v{away['code']}"), [f for _, f, _ in self.mids])
         if text:
             ink = next(i for _, f, i in self.fonts if f is font)
-            font.draw(self.img, (self.W - font.width(text) + 1) // 2, self.base(ink), text, colour)
+            self.centred(font, text, self.base(ink), colour)
+        else:                                      # (no room for the letters at all: the two kits, at least)
+            self.kits(1, home["colours"], away["colours"])
 
     def score(self, home, away, a, b, colour):
         """NTH 2-1 STH: the codes at the edges, the score in the middle in the biggest digits that fit, with a
@@ -214,14 +253,14 @@ class Page:
         a, b = str(a), str(b)
         small, tiny = self.fonts[1], self.fonts[2]
         tries = [(2, 3, small, f) for f in self.mids[:1]] + [(1, g, small, f) for f in self.mids[:1] for g in (2, 1)] + \
-                [(1, 1, tiny, f) for f in self.mids] + [(0, 0, tiny, f) for f in self.mids[1:] or self.mids]
+                [(1, 1, tiny, f) for f in self.mids] + [(0, MARGIN, tiny, f) for f in self.mids[1:] or self.mids]
         for stripe, gap, (_, code, code_ink), (_, digits, ink) in tries:
             if code_ink > ink:
                 continue
             dash = 4 if ink >= 9 else 3
             wide = digits.width(a) + 2 + dash + 2 + digits.width(b)
             sides = max(code.width(home["code"]), code.width(away["code"]))
-            if 2 * (stripe + gap + sides) + 4 + wide <= self.W:
+            if 2 * (stripe + gap + sides) + 2 * SCORE_GAP + wide <= self.W:   # (a clear gap between the score and the codes)
                 self.kits(stripe, home["colours"], away["colours"])
                 at = self.centre + 2 if ink >= 9 else self.base(ink)
                 code.draw(self.img, stripe + gap, at, home["code"], TEXT)
@@ -229,38 +268,73 @@ class Page:
                 self.digits(digits, ink, a, b, colour)
                 return
         for _, digits, ink in self.mids:          # no room for the codes: the score alone (if even that fits)
-            if digits.width(a) + 4 + (4 if ink >= 9 else 3) + digits.width(b) <= self.W:
+            if digits.width(a) + 4 + (4 if ink >= 9 else 3) + digits.width(b) <= self.room:
                 self.digits(digits, ink, a, b, colour)
                 return
 
     def digits(self, font, ink, a, b, colour):
         dash = 4 if ink >= 9 else 3
         wa, y = font.width(a), self.base(ink)
-        x = max(0, (self.W - (wa + 2 + dash + 2 + font.width(b)) + 1) // 2)
+        x = max(MARGIN, (self.W - (wa + 2 + dash + 2 + font.width(b)) + 1) // 2)
         font.draw(self.img, x, y, a, colour)
         font.draw(self.img, x + wa + 4 + dash, y, b, colour)
         up = 6 if ink >= 9 else ink // 2 + 1
         self.d.rectangle([x + wa + 2, y - up, x + wa + 1 + dash, y - up + (1 if ink >= 9 else 0)], fill=colour)
 
+    def one(self, words, colour, mark=None, icon=None, kits=None):
+        """A panel's one line: ``words`` as big as fits, centred. ``icon``: the sport's, at the left, where the words
+        still fit beside it. ``kits``: the two kits' stripes at the edges, only where the words keep a dark column
+        from them. Returns the words drawn."""
+        fonts = [f for _, f, _ in self.mids]
+        left = 0
+        if icon is not None and icon.height <= self.H:
+            font, text = self.fit(words, fonts, self.room - icon.width - 2)
+            if text:
+                self.img.paste(icon, (MARGIN, max(0, (self.H - icon.height) // 2)), icon)
+                left = icon.width + 2                # (two dark LEDs between the icon and the words)
+        if not left:
+            font, text = self.fit(words, fonts)
+        if text:
+            ink = next(i for _, f, i in self.fonts if f is font)
+            x = self.centred(font, text, self.base(ink), colour, left, mark)
+            if kits and x >= 3 and x + font.width(text) <= self.W - 3:
+                self.kits(1, *kits)
+        elif kits:
+            self.kits(1, *kits)
+        return text
+
 
 # -- the frames ---------------------------------------------------------------------------------------------------
-def fixture(ctx, home, away, top, bottom, bottom_colour=AMBER):
+def fixture(ctx, home, away, top, bottom, bottom_colour=AMBER, icon=None):
     """Next match, and Postponed: the date, NTH v STH, and a line under it (KO 15:00, POSTPONED)."""
     p = Page(ctx)
-    p.line(p.top, top, GREY)
+    if p.one_line:                                 # the teams, the day, the time, in turn
+        teams = f"{home['code']} v {away['code']}"
+        teams = teams if p.tiny.width(teams) <= p.W else f"{home['code']}v{away['code']}"   # (spaced wherever it fits at all)
+        p.one(*p.turn(((teams,), TEXT), (top, GREY), (bottom, bottom_colour)),
+              kits=(home["colours"], away["colours"]))
+        return p.img
+    p.line(p.top, top, GREY, icon)
     p.names(home, away)
     p.line(p.bottom - 1 if p.bottom and p.H >= 30 else p.bottom, bottom, bottom_colour)
     return p.img
 
 
-def scoreline(ctx, home, away, score, top, top_colour, bottom="", score_colour=TEXT, minute="", dot=False):
+def scoreline(ctx, home, away, score, top, top_colour, bottom="", score_colour=TEXT, minute="", dot=False, icon=None):
     """Live, half time and full time. ``top`` centred (HALF TIME), or with ``minute``: LIVE at the left with its
     dot and the minute at the right."""
     p = Page(ctx)
+    if p.one_line:                                 # the score, and what it is (LIVE 67', FULL TIME), in turn
+        said = top if not minute or not isinstance(top, str) else (f"{top} {minute if isinstance(minute, str) else minute[-1]}".strip(), top)
+        if _tick[0] % 2:
+            p.one(said, top_colour)
+        else:
+            p.score(home, away, score[0], score[1], score_colour)
+        return p.img
     if p.top is not None and minute:
         tiny = p.tiny
-        _, minute = p.fit(minute, [tiny], p.W - 1)
-        room = p.W - tiny.width(minute) - 1
+        _, minute = p.fit(minute, [tiny], p.room)
+        room = p.W - MARGIN - tiny.width(minute)
         _, top = p.fit(top, [tiny], room - 7)
         if top:
             if dot:
@@ -269,14 +343,15 @@ def scoreline(ctx, home, away, score, top, top_colour, bottom="", score_colour=T
         if minute:
             tiny.draw(p.img, room, p.top, minute, AMBER)
     else:
-        p.line(p.top, top, top_colour)
+        p.line(p.top, top, top_colour, icon)
     p.score(home, away, score[0], score[1], score_colour)
     p.line(p.bottom, bottom, GREY)
     return p.img
 
 
-def table(ctx, rows, mine):
-    """The rows of the league table around ``mine`` (a team id): place, code, points."""
+def table(ctx, rows, mine, reverse=True, band=AMBER):
+    """The rows of the table around ``mine`` (a team or driver id): place, code, points. The row of ``mine`` is drawn
+    dark on a band of ``band`` (amber for your team, HIGHLIGHT for a driver picked out), not by colour alone."""
     p = Page(ctx)
     if not rows:
         return p.img
