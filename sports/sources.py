@@ -537,4 +537,23 @@ class TheSportsDB:
         return []
 
 
-SOURCES = {s.id: s for s in (FootballData(), TheSportsDB())}
+SOURCES = {s.id: s for s in (FootballData(), TheSportsDB())}      # (football's two: the Source setting's choices)
+
+
+def source_for(sport, source="football_data", tour=None):
+    """The source a screen of ``sport`` uses: for football the one chosen, for the other team sports TheSportsDB,
+    for Formula 1 Jolpica-F1, for tennis and golf the tour on TheSportsDB."""
+    from .sports import SPORTS, tour_for
+    kind = SPORTS.get(sport, SPORTS["football"])["kind"]
+    if kind == "championship":
+        from .f1 import JOLPICA
+        return JOLPICA
+    if kind == "tour":
+        from .tours import tour_source
+        return tour_source(tour_for(sport, tour))
+    if sport in (None, "football") or sport not in SPORTS:
+        return SOURCES.get(source) or SOURCES["football_data"]
+    return _TEAMS.setdefault(sport, TheSportsDB(sport))
+
+
+_TEAMS = {}
