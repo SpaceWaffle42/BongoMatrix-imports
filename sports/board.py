@@ -158,12 +158,12 @@ class Board(Racing, Scrolls, Style):
         live_age = t - view["at"].get("live", 0)
         playing = next((m for m in matches if m["state"] in IN_PLAY), None)
         due = next((m for m in matches if m["state"] == "scheduled" and m["timed"] and 0 <= t - m["kickoff"] < 4 * 3600), None)
-        last = next((m for m in reversed(matches) if m["state"] == "finished" and m["score"]), None)   # (no score read: no result)
+        last = next((m for m in reversed(matches) if m["state"] == "finished" and (m["score"] or m.get("said"))), None)   # (no score read: no result)
         upcoming = due or next((m for m in matches if (m["state"] == "scheduled" and m["kickoff"] > t)
                                 or (m["state"] in ("postponed", "suspended") and m["kickoff"] > t - 86400)), None)
         ended = view["ended"].get(last["id"], last["kickoff"] + 7200) if last else None
         just_ended = last is not None and 0 <= t - ended < FULL_TIME_HOLD
-        take_over = bool(self.settings["take_over"]) and not preview
+        take_over = bool(self.settings.get("take_over")) and not preview and bool(self.source.live_every)   # (only where there are live scores)
 
         if playing and "live" in self.show:
             if preview and int(t // VIEW_SECONDS) % 2 == 0:
@@ -174,7 +174,7 @@ class Board(Racing, Scrolls, Style):
         if just_ended and ("live" in self.show or "result" in self.show):
             self.stay = take_over                                # the final score, for a moment, then back to the playlist
             return self.result(last, view, now, t)
-        if due and "live" in self.show and take_over:
+        if due and "live" in self.show and take_over and t - due["kickoff"] < FIRST_WORD:
             self.waiting = True                                  # kick-off has passed: a moment longer, for the first word of it
 
         views = []
@@ -189,7 +189,7 @@ class Board(Racing, Scrolls, Style):
         if "table" in self.show and any(r["id"] == team["id"] for r in view["table"]):
             views.append(("table", None))
         if not views:
-            return draw.card(self.ctx, (team["name"].upper(), team["code"]), ("NO FIXTURES", "NO GAMES"), "" if matches else ("NOTHING TO SHOW YET", "NOTHING YET"))
+            return draw.card(self.ctx, (team["name"].upper(), team["code"]), ("NO FIXTURES", "NO GAMES"), "" if matches else ("NOTHING TO SHOW YET", "NOTHING YET"), icon=self.icon)
         kind, match = self.turn(views, now, VIEW_SECONDS)
         if kind == "team":
             return self.found(team)
@@ -216,23 +216,26 @@ class Board(Racing, Scrolls, Style):
     # -- the views ----------------------------------------------------------------------------------------------
     def found(self, team):
         league = (team.get("league") or {}).get("name") or team.get("country") or ""
-        return draw.card(self.ctx, "YOUR TEAM", (team["name"].upper(), team["code"]), league.upper(), bottom_colour=draw.AMBER, kit=team["colours"])
+        return draw.card(self.ctx, "YOUR TEAM", (team["name"].upper(), team["code"]), league.upper(), bottom_colour=draw.AMBER, kit=team["colours"], icon=self.icon)
 
     def next(self, match, view, now, t):
-        top = self.day(match["kickoff"], now)
+        top, icon = self.day(match["kickoff"], now), self.match_icon
         if match["state"] == "postponed":
-            return draw.fixture(self.ctx, match["home"], match["away"], top, ("POSTPONED", "OFF"), draw.RED)
+            return draw.fixture(self.ctx, match["home"], match["away"], top, ("POSTPONED", "OFF"), draw.RED, icon=icon)
         if match["state"] == "suspended":
-            return draw.fixture(self.ctx, match["home"], match["away"], top, ("SUSPENDED", "STOPPED"), draw.RED)
+            return draw.fixture(self.ctx, match["home"], match["away"], top, ("SUSPENDED", "STOPPED"), draw.RED, icon=icon)
         if match["state"] in IN_PLAY:
-            return draw.fixture(self.ctx, match["home"], match["away"], top, "IN PLAY")
+            return draw.fixture(self.ctx, match["home"], match["away"], top, "IN PLAY", icon=icon)
         old = t - max(view["at"].get("matches", 0), view["at"].get("live", 0))
+        if match["kickoff"] + 300 <= t and not self.source.live_every:   # no live scores for this sport: say so, plainly
+            return draw.fixture(self.ctx, match["home"], match["away"], top, ("STARTED, NO LIVE SCORES", "STARTED"), draw.GREY, icon=icon)
         if match["kickoff"] + 300 <= t:                          # well past kick-off and nothing has been heard since
-            return draw.fixture(self.ctx, match["home"], match["away"], top, (f"NO NEWS FOR {ago(old)}", f"NO NEWS {ago(old)}"), draw.GREY)
+            return draw.fixture(self.ctx, match["home"], match["away"], top, (f"NO NEWS FOR {ago(old)}", f"NO NEWS {ago(old)}"), draw.GREY, icon=icon)
         if old > STALE and int(t // 4) % 2:                      # a day without an answer: it may have moved
-            return draw.fixture(self.ctx, match["home"], match["away"], top, (f"CHECKED {ago(old)} AGO", f"OLD: {ago(old)}"), draw.GREY)
-        kick = self.local(match["kickoff"], now).strftime("KO %H:%M") if match["timed"] else "KO TBC"
-        return draw.fixture(self.ctx, match["home"], match["away"], top, kick)
+            return draw.fixture(self.ctx, match["home"], match["away"], top, (f"CHECKED {ago(old)} AGO", f"OLD: {ago(old)}"), draw.GREY, icon=icon)
+        start = "KO" if self.sport in ("football", "rugby_union", "american_football") else "AT"
+        kick = self.local(match["kickoff"], now).strftime(f"{start} %H:%M") if match["timed"] else f"{start} TBC"
+        return draw.fixture(self.ctx, match["home"], match["away"], top, kick, icon=icon)
 
     def live(self, match, t, age, fresh):
         state, score = match["state"], match["score"] or ["?", "?"]   # (a score that couldn't be read: not a made-up 0-0)
@@ -253,20 +256,56 @@ class Board(Racing, Scrolls, Style):
             return draw.scoreline(self.ctx, match["home"], match["away"], score, ("PENALTIES", "PENS"), draw.RED, bottom, draw.AMBER)
         if state == "extra_time":
             minute = (f"ET {minute}", minute) if minute else "ET"
+        if not minute and match.get("period"):                   # Q3, P2: the period, as the source says it
+            minute = match["period"]
         blink = int(t * 2) % 2 == 0
         return draw.scoreline(self.ctx, match["home"], match["away"], score, "LIVE", draw.RED, bottom, draw.AMBER,
                               minute=minute or " ", dot=blink)
 
     def result(self, match, view, now, t):
-        score = match["score"] or [0, 0]
+        score = match["score"]
         when = self.local(match["kickoff"], now)
-        top = "FULL TIME" if when.date() == now.date() or 0 <= t - match["kickoff"] < 12 * 3600 else (f"FT {DAYS[when.weekday()]} {when.day} {MONTHS[when.month - 1]}", f"FT {when.day} {MONTHS[when.month - 1]}", "FT")
+        full = "FULL TIME" if self.sport in ("football", "rugby_union") else "RESULT"   # (FINAL is a tournament's final)
+        ft = "FT " if full == "FULL TIME" else ""
+        top = full if when.date() == now.date() or 0 <= t - match["kickoff"] < 12 * 3600 else tuple(dict.fromkeys(
+            (f"{ft}{DAYS[when.weekday()]} {when.day} {MONTHS[when.month - 1]}", f"{ft}{when.day} {MONTHS[when.month - 1]}", ft.strip() or full)))
         bottom = ""
         place = next((r["pos"] for r in view["table"] if r["id"] == (view["team"] or {}).get("id")), None)
         if match.get("after") == "penalties":
             bottom = (f"{match['pens'][0]}-{match['pens'][1]} ON PENS", f"PENS {match['pens'][0]}-{match['pens'][1]}") if match.get("pens") else ("ON PENALTIES", "ON PENS")
         elif match.get("after") == "extra_time":
             bottom = ("AFTER EXTRA TIME", "AFTER ET", "AET")
+        elif match.get("after") == "overtime":
+            bottom = ("AFTER OVERTIME", "AFTER OT", "OT")
         elif place and view["at"].get("table", 0) >= view["ended"].get(match["id"], 0) - 60:
             bottom = (f"{ordinal(place)} IN TABLE", ordinal(place))  # (only from a table fetched since the whistle)
-        return draw.scoreline(self.ctx, match["home"], match["away"], score, top, draw.GREEN, bottom)
+        elif match.get("said"):                                  # cricket: "Scorchers won by 6 wickets", as the source says it
+            bottom = said_words(match["said"], match["home"], match["away"])
+        if score is None:                                        # (a result in words only: the two teams, and the words)
+            return draw.fixture(self.ctx, match["home"], match["away"], top, bottom, draw.GREEN, icon=self.match_icon)
+        return draw.scoreline(self.ctx, match["home"], match["away"], score, top, draw.GREEN, bottom, icon=self.match_icon)
+
+
+SHORTER = (("WICKETS", "WKTS"), ("WICKET", "WKT"), ("RUNS", "RUNS"))
+
+
+def said_words(said, home=None, away=None):
+    """A result in words, longest first: the whole; without what's in brackets; with the winner's three letters
+    (PER WON BY 6 WICKETS); with WKTS for wickets. Every wording names who won where it can."""
+    said = said.upper().strip()
+    plain_said = said.split(" (")[0].strip()
+    out = [said, plain_said]
+    if " WON " in f" {plain_said} ":
+        who, rest = plain_said.split(" WON ", 1)
+        code = next((side["code"] for side in (home, away) if side and plain(who) and (
+            plain(who) in plain(side.get("name", "")) or plain(side.get("name", "")) in plain(who))), None)
+        if code:
+            out += [f"{code} WON {rest}"]
+        short = rest
+        for long, brief in SHORTER:
+            short = short.replace(long, brief)
+        out += [f"{code} WON {short}"] if code else []
+        if code and short.startswith("BY "):
+            out += [f"{code} WON, {short[3:]}"]          # (PER WON, 6 WKTS: who won, where the longer won't fit)
+        out += [f"WON {short}"]                        # (the score above says who: the bigger number)
+    return tuple(dict.fromkeys(w for w in out if w))
