@@ -1,19 +1,39 @@
 """Drawing the frames. Every function takes a canvas and plain data and draws one frame: nothing here knows
-where the data came from, or what time it is.
+where the data came from (the time only to take turns on a one-line panel, ``tick``).
 
 Everything is placed from the canvas's own width and height (the panel's safe area can be smaller than 64x32).
-At 64x32 the frames are the agreed design, pixel for pixel. As the canvas shrinks, the kit stripes give way first
-(2 px, 1 px, none), then the type steps down (big, small, tiny), then the top and bottom lines go, so a line is
-never drawn over another and nothing is clipped.
+As the canvas shrinks, the kit stripes give way first (2 px, 1 px, none), then the type steps down (big, small,
+tiny), then the top and bottom lines go, so a line is never drawn over another and nothing is clipped. On a panel
+with room for one line only, that line takes turns between what the lines above and below it would have said.
 
-Words are never cut: each line comes with shorter ways of saying it, and if none fits it is left out.
+Words are never cut: each line comes with shorter ways of saying it, and if none fits it is left out. Every word is
+kept at least one LED in from each edge (a frame round the panel can hide its outermost LEDs), and every letter has
+a dark column between it and the next (``Type``), whatever the typeface's own spacing.
 
-No badge or crest is ever drawn: a team is its three letters and two stripes of its kit colours.
+No badge or crest is ever drawn: a team is its three letters and two stripes of its kit colours. A sport's own
+small icon (art.py, made in the Animator) sits at the left of the top line, where the words still fit beside it.
 """
-from PIL import ImageDraw
+import unicodedata
+
+from PIL import Image, ImageDraw
 
 TEXT, GREY, AMBER, RED, GREEN = (240, 236, 228), (175, 181, 190), (255, 181, 71), (255, 80, 80), (110, 220, 150)
+HIGHLIGHT = (90, 200, 255)       # the driver or player picked out: its own colour (amber is for times and states), with a
+#                                  marker that isn't colour as well (a ">" before the name, or the row drawn reversed)
 INK = {"6x13B": 9, "5x7": 6, "tom-thumb": 5}      # rows a capital really fills, above its baseline
+SPACE = {"6x13B": 3, "5x7": 2, "tom-thumb": 2}    # a word space, on top of the dark column after the letter before it
+MARGIN = 1                                        # LEDs kept dark at each side of every line of words
+SCORE_GAP = 3                                     # dark LEDs at least between a score and the teams' letters
+NARROW = 40                                       # below this width a word that needs every LED may use them all
+_tick = [0]
+
+
+def tick(now):
+    """The turn of a one-line panel (every two seconds), from the frame's time."""
+    try:
+        _tick[0] = int(now.timestamp() // 2)
+    except (AttributeError, OverflowError, ValueError, OSError):
+        _tick[0] = 0
 
 
 def rgb(colour, default=(120, 126, 134)):
@@ -23,6 +43,103 @@ def rgb(colour, default=(120, 126, 134)):
         return default
 
 
+def plain_letters(text):
+    """``text`` in the letters the panel's typefaces have: accents taken off (MÜLLER: MULLER), anything else left out."""
+    text = unicodedata.normalize("NFKD", "".join(UNFOLDED.get(c, c) for c in str(text)))
+    return "".join(c for c in text.encode("ascii", "ignore").decode() if c.isprintable())
+
+
+# Letters of the Matrix's own typefaces that read as other letters from across a room, drawn here instead (the
+# typefaces aren't changed, only these letters replaced when this module draws): tom-thumb's Q, N and W (3 LEDs
+# wide: they read as 4, n and H; M too), 5x7's W and M and 6x13B's M and W (all read as H).
+LETTERS = {
+    "tom-thumb": {
+        "Q": (".##.", "#..#", "#..#", "#.#.", ".#.#"),
+        "N": ("#..#", "##.#", "#.##", "#..#", "#..#"),
+        "W": ("#...#", "#...#", "#.#.#", "#.#.#", ".#.#."),
+        "M": ("#...#", "##.##", "#.#.#", "#...#", "#...#"),
+        "I": ("#", "#", "#", "#", "#"),      # (one LED wide, so the wider M still lets OLYMPICS fit 32 LEDs)
+    },
+    "5x7": {
+        "W": ("#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"),
+        "M": ("#...#", "##.##", "#.#.#", "#...#", "#...#", "#...#"),
+    },
+    "6x13B": {
+        "M": ("##...##", "###.###", "#######", "##.#.##", "##.#.##", "##...##", "##...##", "##...##", "##...##"),
+        "W": ("##...##", "##...##", "##...##", "##...##", "##.#.##", "##.#.##", "#######", "###.###", "##...##"),
+    },
+}
+UNFOLDED = {"Ø": "O", "ø": "o", "Æ": "AE", "æ": "ae", "Ł": "L", "ł": "l", "Đ": "D", "đ": "d", "ß": "SS", "ẞ": "SS",
+            "Œ": "OE", "œ": "oe", "Þ": "TH", "þ": "th", "Ð": "D", "ð": "d", "Ħ": "H", "ħ": "h", "ı": "i", "Ŋ": "NG",
+            "ŋ": "ng", "Ŧ": "T", "ŧ": "t", "ĸ": "k", "ſ": "s", "Ə": "E", "ə": "e", "’": "'", "‘": "'", "–": "-", "—": "-"}
+#                                  (letters with no plain form in Unicode's own decomposition, mapped by hand)
+
+
+def _mask(rows):
+    img = Image.new("1", (len(rows[0]), len(rows)), 0)
+    for y, row in enumerate(rows):
+        for x, c in enumerate(row):
+            if c == "#":
+                img.putpixel((x, y), 1)
+    return img
+
+
+class Type:
+    """A typeface drawn with exactly one dark column between letters: each letter's own ink, then a gap. (The
+    typefaces' own spacing lets some letters touch, NTH, DAYS, 108, and leaves false gaps round I and T.)"""
+    _made = {}
+
+    def __new__(cls, font, name):
+        key = (id(font), name)
+        if key not in cls._made:
+            self = super().__new__(cls)
+            self.font, self.name, self.space, self.glyphs = font, name, SPACE.get(name, 2), {}
+            cls._made[key] = self
+        return cls._made[key]
+
+    def __init__(self, font, name):
+        pass
+
+    def glyph(self, c):
+        """(mask or None, first ink column, ink width, rows above the baseline) of one letter."""
+        if c not in self.glyphs:
+            own = LETTERS.get(self.name, {}).get(c)
+            if own:
+                mask = _mask(own)
+                cap = self.font.glyphs.get(ord("H"))
+                base = (cap[2] - cap[3].getbbox()[1]) if cap and cap[3] is not None and cap[3].getbbox() else len(own)
+                self.glyphs[c] = (mask, 0, mask.width, base)       # (its top row where the H's is)
+            else:
+                got = self.font.glyphs.get(ord(c)) or self.font.glyphs.get(ord("?"))
+                _, _, top, mask = got if got else (0, 0, 0, None)
+                box = mask.getbbox() if mask is not None else None
+                #  (where its ink starts in its own picture: the typeface's offset is left out, so ":" and "'" get a dark
+                #   column on each side like every other letter)
+                self.glyphs[c] = (mask, box[0], box[2] - box[0], top) if box else (None, 0, 0, 0)
+        return self.glyphs[c]
+
+    def width(self, text):
+        x, last = 0, False
+        for c in plain_letters(text):
+            mask, _, ink, _ = self.glyph(c)
+            if c == " " or mask is None:
+                x, last = x + self.space, False
+            else:
+                x, last = x + ink + 1, True
+        return x - 1 if last else x
+
+    def draw(self, img, x, baseline, text, fill):
+        start = x
+        for c in plain_letters(text):
+            mask, left, ink, top = self.glyph(c)
+            if c == " " or mask is None:
+                x += self.space
+                continue
+            img.paste(fill, (x - left, baseline - top), mask)
+            x += ink + 1
+        return x - start
+
+
 class Page:
     """One frame being drawn: the canvas, the three typefaces, and where its rows go."""
 
@@ -30,8 +147,9 @@ class Page:
         self.img = ctx.canvas()
         self.W, self.H = self.img.size
         self.d = ImageDraw.Draw(self.img)
-        self.fonts = [(name, ctx.fonts(name), INK[name]) for name in ("6x13B", "5x7", "tom-thumb")]
+        self.fonts = [(name, Type(ctx.fonts(name), name), INK[name]) for name in ("6x13B", "5x7", "tom-thumb")]
         self.tiny = self.fonts[2][1]
+        self.room = self.W - 2 * MARGIN       # the width a line of words may use
         H = self.H
         if H >= 24:                    # three rows: a line at the top, the big row, a line at the bottom
             self.top, self.bottom, self.centre, room = 6, H - 2, H // 2, H // 2 - 3
