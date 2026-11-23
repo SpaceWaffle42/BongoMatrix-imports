@@ -362,30 +362,112 @@ def table(ctx, rows, mine, reverse=True, band=AMBER):
     for _, font, ink in p.fonts[1:]:
         place = max(font.width(str(r["pos"])) for r in shown)
         points = max(font.width(str(r["points"])) for r in shown)
-        if 1 + place + 3 + max(font.width(r["code"]) for r in shown) + 2 + points + 1 <= p.W or ink == 5:
+        if MARGIN + place + 3 + max(font.width(r["code"]) for r in shown) + 2 + points + MARGIN <= p.W or ink == 5:
             break
+    with_points = all(MARGIN + place + 3 + font.width(r["code"]) + 2 + points + MARGIN <= p.W for r in shown)
     pitch = 8 if p.H >= count * 8 - 1 else max(ink + 1, p.H // count)
     first = ink + max(0, (p.H - ((count - 1) * pitch + ink)) // 2) if p.H != 32 else 7
     for i, row in enumerate(shown):
-        y, colour = first + i * pitch, AMBER if row["id"] == mine else TEXT
+        y, colour, dim = first + i * pitch, AMBER if row["id"] == mine else TEXT, GREY
+        if reverse and row["id"] == mine and mine is not None:
+            p.d.rectangle([0, y - ink - 1, p.W - 1, min(p.H - 1, y + 1)], fill=band)
+            colour = dim = (0, 0, 0)
         if place + points + 4 <= p.W:            # (too narrow even for those: the row is left out)
-            font.draw(p.img, 1, y, str(row["pos"]), GREY)
-            font.draw(p.img, p.W - font.width(str(row["points"])) - 1, y, str(row["points"]), colour)
-            if 1 + place + 3 + font.width(row["code"]) + 2 + points + 1 <= p.W:
-                font.draw(p.img, 1 + place + 3, y, row["code"], colour)
+            font.draw(p.img, MARGIN, y, str(row["pos"]), dim)
+            if with_points:                      # points on every row, or (too narrow) on none: the codes instead
+                font.draw(p.img, p.W - font.width(str(row["points"])) - MARGIN, y, str(row["points"]), colour)
+                font.draw(p.img, MARGIN + place + 3, y, row["code"], colour)
+            elif MARGIN + place + 2 + font.width(row["code"]) + MARGIN <= p.W:
+                font.draw(p.img, MARGIN + place + 2, y, row["code"], colour)
     return p.img
 
 
-def card(ctx, top, middle, bottom, top_colour=GREY, middle_colour=TEXT, bottom_colour=GREY, kit=None):
-    """Three lines of words: what the screen needs (ADD YOUR KEY), or the team it found."""
+def card(ctx, top, middle, bottom, top_colour=GREY, middle_colour=TEXT, bottom_colour=GREY, kit=None, icon=None, mark=None):
+    """Three lines of words: what the screen needs (NEEDS A KEY), the team it found, the next race. On a one-line
+    panel the three take turns (the middle, then the bottom, then the top)."""
     p = Page(ctx)
-    p.line(p.top, top, top_colour)
+    if p.one_line:                                 # (the sport's icon beside the words, where they still fit)
+        p.one(*p.turn((middle, middle_colour), (bottom, bottom_colour), (top, top_colour)), mark=mark, icon=icon,
+              kits=(kit, kit) if kit else None)
+        return p.img
+    p.line(p.top, top, top_colour, icon)
     if kit:
         p.kits(2 if p.W >= 40 else 1, kit, kit)
-    fonts = [f for _, f, ink in p.mids if ink <= 6] or [p.tiny]
-    font, middle = p.fit(middle, fonts, p.W - (6 if kit else 0))
+    fonts = [f for _, f, ink in p.mids if ink <= 6 or p.H >= 40] or [p.tiny]   # (the big type only where there's room round it)
+    font, middle = p.fit(middle, fonts, p.room - (6 if kit else 0))
     ink = next(i for _, f, i in p.fonts if f is font)
     if middle:
-        font.draw(p.img, (p.W - font.width(middle) + 1) // 2, p.base(ink), middle, middle_colour)
+        p.centred(font, middle, p.base(ink), middle_colour)
+    p.line(p.bottom, bottom, bottom_colour, mark=mark)
+    return p.img
+
+
+GOLD, SILVER, BRONZE = (212, 175, 55), (192, 196, 204), (205, 127, 50)
+
+
+def podium(ctx, top, rows, mine=None, icon=None):
+    """The last race's first three on a podium: the winner's step in the middle and highest, second on the left,
+    third on the right, each driver's three letters over their step. ``mine``: a driver id, whose letters are drawn
+    dark on a band of HIGHLIGHT (not by colour alone)."""
+    p = Page(ctx)
+    by = {r["pos"]: r for r in rows}
+    if not by:
+        p.line(p.top, top, GREY, icon)
+        return p.img
+    winner = by.get(1) or rows[0]
+    if p.one_line:                                 # the three in turn
+        picked = lambda r: mine is not None and r.get("id") == mine          # (marked with ">", not by colour alone)
+        p.one(*p.turn(*(((f"{r['pos']} >{r['code']}" if picked(r) else f"{r['pos']} {r['code']}",), HIGHLIGHT if picked(r) else TEXT)
+                        for r in sorted(rows, key=lambda r: r["pos"]))), mark=HIGHLIGHT)
+        return p.img
+    p.line(p.top, top, GREY, icon)
+    first = (p.top + 3) if p.top is not None else 0               # the first row the podium may use (a dark row under the top line)
+    fits = [(font, ink) for _, font, ink in p.fonts[1:] if 3 * max(font.width(r["code"]) for r in rows) + 12 <= p.W]
+    font, ink = fits[0] if fits else (p.tiny, 5)
+    column = p.W // 3
+    tall = min(18, p.H - first - ink - 3)                          # the winner's step, under the winner's letters
+    if tall < 3 or not fits:                                       # no room for steps: the first three in a row, or the winner
+        font, text = p.fit(("  ".join(f"{r['pos']} {r['code']}" for r in rows), " ".join(r["code"] for r in rows), f"1 {winner['code']}"),
+                           [f for n, f, _ in p.mids if n != "6x13B"] or [p.tiny])
+        if text:
+            p.centred(font, text, p.base(next(i for _, f, i in p.fonts if f is font)), TEXT)
+        return p.img
+    for pos, x0, high, colour in ((2, 0, tall * 2 // 3, SILVER), (1, column, tall, GOLD), (3, 2 * column, max(2, tall // 2), BRONZE)):
+        row = by.get(pos)
+        if row is None:
+            continue
+        x0, x1 = max(MARGIN, x0 + 1), (x0 + column - 2 if pos != 3 else p.W - 1 - MARGIN)
+        y0 = p.H - high
+        p.d.rectangle([x0, y0, x1, p.H - 1], fill=colour)
+        if high >= 6:
+            digit = p.tiny
+            digit.draw(p.img, x0 + (x1 - x0 + 1 - digit.width(str(pos)) + 1) // 2, y0 + 6, str(pos), (0, 0, 0))
+        code, x = row["code"], x0 + (x1 - x0 + 1 - font.width(row["code"]) + 1) // 2
+        picked = mine is not None and row.get("id") == mine
+        if picked:
+            p.d.rectangle([x - 1, y0 - 3 - ink, x + font.width(code), y0 - 1], fill=HIGHLIGHT)
+        font.draw(p.img, x, y0 - 2, code, (0, 0, 0) if picked else TEXT)
+    return p.img
+
+
+def games(ctx, torch, top, middle, bottom, middle_colour=TEXT, bottom_colour=AMBER, icon=None):
+    """The Olympics and Paralympics tracker: the Games' name on top (with a sun or a snowflake), the torch at the
+    left, the count in the middle (599 DAYS, DAY 5 OF 17) as big as fits, and which Games at the bottom. On a
+    one-line panel the count and which Games take turns."""
+    p = Page(ctx)
+    if p.one_line:                                 # the count, which Games, and where, in turn
+        p.one(*p.turn((middle, middle_colour), (bottom, bottom_colour), (top, GREY)))
+        return p.img
+    p.line(p.top, top, GREY, icon)
+    room = 0
+    if torch is not None and p.W >= 48 and p.H >= 24:
+        y = max(0 if p.top is None else p.top + 2, p.centre - torch.height // 2 + 1)
+        if y + torch.height <= (p.bottom - 6 if p.bottom else p.H):
+            p.img.paste(torch, (MARGIN, y), torch)
+            room = torch.width + 2
+    font, text = p.fit(middle, [f for _, f, _ in p.mids], p.room - room)
+    if text:
+        ink = next(i for _, f, i in p.fonts if f is font)
+        p.centred(font, text, p.centre + 2 if ink >= 9 and p.H >= 30 else p.base(ink), middle_colour, room)
     p.line(p.bottom, bottom, bottom_colour)
     return p.img
