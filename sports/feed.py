@@ -31,9 +31,9 @@ import time
 import urllib.error
 import urllib.request
 
-from .sources import SOURCES, Trouble, playing
+from .sources import SOURCES, STATES, Trouble, playing
 
-AGENT = "bongo-sports/1.0 (a Bongo Matrix module)"
+AGENT = "bongo-sports/2.0.0 (a Bongo Matrix module)"      # (Jolpica asks for an app name and version)
 KEEP = "cache.json"
 IDLE_AFTER = 300.0          # s since any screen asked: the feed is forgotten
 PREVIEW_SETTLE = 2.0        # s a preview must have been asking before anything is fetched for it (someone typing)
@@ -46,7 +46,55 @@ AFTER_FULL_TIME = 5 * 60.0  # then the fixtures and the table once more, when th
 REFUSED_REST = 15 * 60.0
 MISSING_REST = 6 * 3600.0
 MOST_BYTES = 2_000_000
+AWAIT_FROM, AWAIT_UNTIL = 90 * 60.0, 12 * 3600.0   # (a source with no live scores: a result is looked for this long after the start)
 MOST_LISTS = 60             # answers kept in the cache file (team lists, lookups)
+WHOLE_ANSWER = 20.0         # s an answer may take, all of it: one that trickles in is given up on (the rest of the feeds wait)
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect: it would carry the key's header to wherever it points (another site, or http://).
+    A redirect is taken as an answer we didn't expect."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(NoRedirect)
+
+
+def socket_of(answer):
+    """The socket an answer is read from (an HTTP response, or the one inside an HTTP error), or None."""
+    for path in (("fp", "raw", "_sock"), ("fp", "fp", "raw", "_sock")):
+        thing = answer
+        for name in path:
+            thing = getattr(thing, name, None)
+        if thing is not None and hasattr(thing, "settimeout"):
+            return thing
+    return None
+
+
+def read_all(answer, deadline):
+    """An answer's body, at most MOST_BYTES + 1, or OSError once ``deadline`` (monotonic) has passed. Each read takes
+    whatever has arrived (``read1``) and the socket's own timeout shrinks to the time left, so an answer trickling in
+    a byte at a time still ends at the deadline."""
+    sock = socket_of(answer)
+    read = getattr(answer, "read1", None) or answer.read
+    chunks, size = [], 0
+    while size <= MOST_BYTES:
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise OSError("the answer took too long")
+        if sock is not None:
+            try:
+                sock.settimeout(max(0.05, left))
+            except OSError:
+                pass
+        chunk = read(min(65536, MOST_BYTES + 1 - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
 
 
 def http(url, headers):
