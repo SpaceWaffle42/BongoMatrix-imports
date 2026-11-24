@@ -31,9 +31,9 @@ import time
 import urllib.error
 import urllib.request
 
-from .sources import SOURCES, Trouble, playing
+from .sources import SOURCES, STATES, Trouble, playing
 
-AGENT = "bongo-sports/1.0 (a Bongo Matrix module)"
+AGENT = "bongo-sports/2.0.0 (a Bongo Matrix module)"      # (Jolpica asks for an app name and version)
 KEEP = "cache.json"
 IDLE_AFTER = 300.0          # s since any screen asked: the feed is forgotten
 PREVIEW_SETTLE = 2.0        # s a preview must have been asking before anything is fetched for it (someone typing)
@@ -46,20 +46,69 @@ AFTER_FULL_TIME = 5 * 60.0  # then the fixtures and the table once more, when th
 REFUSED_REST = 15 * 60.0
 MISSING_REST = 6 * 3600.0
 MOST_BYTES = 2_000_000
+AWAIT_FROM, AWAIT_UNTIL = 90 * 60.0, 12 * 3600.0   # (a source with no live scores: a result is looked for this long after the start)
 MOST_LISTS = 60             # answers kept in the cache file (team lists, lookups)
+WHOLE_ANSWER = 20.0         # s an answer may take, all of it: one that trickles in is given up on (the rest of the feeds wait)
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect: it would carry the key's header to wherever it points (another site, or http://).
+    A redirect is taken as an answer we didn't expect."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+OPENER = urllib.request.build_opener(NoRedirect)
+
+
+def socket_of(answer):
+    """The socket an answer is read from (an HTTP response, or the one inside an HTTP error), or None."""
+    for path in (("fp", "raw", "_sock"), ("fp", "fp", "raw", "_sock")):
+        thing = answer
+        for name in path:
+            thing = getattr(thing, name, None)
+        if thing is not None and hasattr(thing, "settimeout"):
+            return thing
+    return None
+
+
+def read_all(answer, deadline):
+    """An answer's body, at most MOST_BYTES + 1, or OSError once ``deadline`` (monotonic) has passed. Each read takes
+    whatever has arrived (``read1``) and the socket's own timeout shrinks to the time left, so an answer trickling in
+    a byte at a time still ends at the deadline."""
+    sock = socket_of(answer)
+    read = getattr(answer, "read1", None) or answer.read
+    chunks, size = [], 0
+    while size <= MOST_BYTES:
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise OSError("the answer took too long")
+        if sock is not None:
+            try:
+                sock.settimeout(max(0.05, left))
+            except OSError:
+                pass
+        chunk = read(min(65536, MOST_BYTES + 1 - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
 
 
 def http(url, headers):
     """(status, headers, parsed JSON or None). The one place this module touches the network."""
     request = urllib.request.Request(url, headers={"User-Agent": AGENT, "Accept": "application/json", **headers})
+    deadline = time.monotonic() + WHOLE_ANSWER
     try:
-        with urllib.request.urlopen(request, timeout=10) as answer:
-            status, got, raw = answer.status, dict(answer.headers), answer.read(MOST_BYTES + 1)
+        with OPENER.open(request, timeout=10) as answer:
+            status, got, raw = answer.status, dict(answer.headers), read_all(answer, deadline)
     except urllib.error.HTTPError as error:
         status, got = error.code, dict(error.headers or {})
         try:
-            raw = error.read(MOST_BYTES + 1)
-        except OSError:
+            raw = read_all(error, deadline)
+        except (OSError, AttributeError):
             raw = b""
     if len(raw) > MOST_BYTES:
         return status, got, None
@@ -75,7 +124,7 @@ HTTP = http                 # (the tests put a pretend one here)
 class Feed:
     def __init__(self, book, source, team_text):
         self.book, self.source, self.team_text = book, source, team_text.strip()
-        self.name = f"{source.id}|{self.team_text.lower()}"
+        self.name = f"{source.feed_id}|{self.team_text.lower()}"
         self.key = ""
         self.asked = time.monotonic()        # when a screen last asked
         self.since = None                    # when a screen that isn't a preview first asked, or a preview began asking
@@ -112,7 +161,7 @@ class Feed:
         """What to fetch next, or None: "team", "matches", "live" or "table"."""
         if self.failed_key is not None and self.failed_key != self.key:
             self.failed_key, self.retry, self.fails = None, 0.0, 0     # a new key: whatever was wrong may not be now
-        if not self.key or not self.team_text or now < self.retry:
+        if (self.source.needs_key and not self.key) or not self.team_text or now < self.retry:
             return None
         at, view = self.view["at"], self.view
         if view["team"] is None:
@@ -120,9 +169,11 @@ class Feed:
         latest_end = max(view["ended"].values(), default=0)
         settle = latest_end and now - latest_end >= AFTER_FULL_TIME and at.get("matches", 0) < latest_end + AFTER_FULL_TIME
         soon = any(m["state"] == "scheduled" and 0 < m["kickoff"] - now <= SOON for m in view["matches"])
+        if not self.source.live_every:          # no live scores: in the hours after a start, the result is looked for more often
+            soon = soon or any(m["state"] == "scheduled" and m["timed"] and AWAIT_FROM <= now - m["kickoff"] < AWAIT_UNTIL for m in view["matches"])
         if settle or now - at.get("matches", 0) >= (SOON_EVERY if soon else FIXTURES_EVERY):
             return "matches"
-        if self.live_match(now) and now - max(at.get("live", 0), at.get("tried", 0)) >= self.source.live_every:
+        if self.source.live_every and self.live_match(now) and now - max(at.get("live", 0), at.get("tried", 0)) >= self.source.live_every:
             return "live"
         if "table" in self.wants and self.source.has_table:
             settle = latest_end and now - latest_end >= AFTER_FULL_TIME and at.get("table", 0) < latest_end + AFTER_FULL_TIME
@@ -213,9 +264,11 @@ class Book:
         self.clock = time.time
         self.load()
 
-    def feed(self, source_id, team_text):
-        source = SOURCES.get(source_id) or next(iter(SOURCES.values()))
-        name = f"{source.id}|{team_text.strip().lower()}"
+    def feed(self, source, team_text):
+        """The feed for ``team_text`` on ``source`` (a source, or the id of one of football's two)."""
+        if isinstance(source, str):
+            source = SOURCES.get(source) or next(iter(SOURCES.values()))
+        name = f"{source.feed_id}|{team_text.strip().lower()}"
         with self.lock:
             feed = self.feeds.get(name)
             if feed is None:
@@ -315,6 +368,9 @@ class Book:
             for name, view in kept.get("feeds", {}).items():
                 if isinstance(view, dict) and isinstance(view.get("team"), dict) and isinstance(view.get("matches"), list) \
                         and isinstance(view.get("at"), dict) and now - float(view["at"].get("matches", 0)) < 30 * 86400:
+                    view["matches"] = [m for m in view["matches"] if sound(m, name)]
+                    view["table"] = [r for r in (view.get("table") or []) if isinstance(r, dict) and isinstance(r.get("id"), str)
+                                     and isinstance(r.get("code"), str) and isinstance(r.get("pos"), int) and isinstance(r.get("points"), (int, float))]
                     self.kept[name] = {"team": view["team"], "matches": view["matches"], "table": view.get("table") or [],
                                        "at": {k: float(v) for k, v in view["at"].items() if isinstance(v, (int, float))},
                                        "ended": {str(k): float(v) for k, v in (view.get("ended") or {}).items() if isinstance(v, (int, float))}}
@@ -325,8 +381,23 @@ class Book:
             self.kept, self.lists = {}, {}   # no file, or a damaged one: start with nothing
 
 
+def sound(match, name):
+    """Whether a match (or race, or tournament) kept in cache.json has every field the screen reads, of the right kind.
+    A damaged one is dropped; it will be fetched again."""
+    if not (isinstance(match, dict) and isinstance(match.get("id"), str) and isinstance(match.get("kickoff"), (int, float))
+            and not isinstance(match.get("kickoff"), bool) and match.get("state") in STATES and isinstance(match.get("timed"), bool)):
+        return False
+    if str(name).startswith("jolpica"):
+        return isinstance(match.get("words"), list) and all(isinstance(w, str) for w in match["words"]) and match["words"] != []
+    if str(name).startswith("thesportsdb:") and str(name).split("|")[0].split(":")[1] in ("atp", "wta", "pga", "dpwt"):
+        return isinstance(match.get("name"), str) and isinstance(match.get("end"), (int, float)) and isinstance(match.get("players"), list)
+    sides = [match.get("home"), match.get("away")]
+    return all(isinstance(s, dict) and isinstance(s.get("code"), str) and isinstance(s.get("id"), str) and isinstance(s.get("colours"), list)
+               and len(s["colours"]) >= 1 for s in sides) and (match.get("score") is None or (isinstance(match["score"], list) and len(match["score"]) == 2))
+
+
 BOOK = Book()
 
 
-def feed_for(source_id, team_text):
-    return BOOK.feed(source_id, team_text)
+def feed_for(source, team_text):
+    return BOOK.feed(source, team_text)

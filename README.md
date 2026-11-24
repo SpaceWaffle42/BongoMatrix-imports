@@ -42,7 +42,7 @@ down, no deeper.
 | `home_assistant/` | Home Assistant | The Matrix appears in Home Assistant through your MQTT broker: the panel as a light, the screen playing, Pause, Next and messages. Runs in the background and reaches one device on your home network (the broker) |
 | `iss_tracker/` | ISS Tracker | Where the International Space Station is now |
 | `pomodoro/` | Pomodoro | A focus timer: work and break rounds |
-| `sports/` | Sports | Your football team: next match, live score, result and league table, with your own football-data.org key. May keep the panel while a match is live |
+| `sports/` | Sports | Ten sports (football, cricket, rugby union, tennis, Formula 1, golf, American football, basketball, ice hockey, baseball): next match, live score where there is one, result, and a countdown to the Olympics and Paralympics. Football and Formula 1 need no paid key; the others need your own TheSportsDB Premium key. May keep the panel while a match is live |
 | `word_of_the_day/` | Word of the day | A new word and its meaning each day |
 
 Each module's own README says how to set it up.

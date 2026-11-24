@@ -1,12 +1,13 @@
 {
   "id": "sports",
   "name": "Sports",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "spacewaffle42",
-  "description": "Your football team: next match, live score, result and league table. Needs your own key from football-data.org or TheSportsDB.",
+  "description": "Ten sports: your team, Formula 1, or a tennis or golf tour, plus an Olympics and Paralympics countdown. Some need your own key from football-data.org or TheSportsDB.",
   "network": [
     "api.football-data.org",
-    "www.thesportsdb.com"
+    "www.thesportsdb.com",
+    "api.jolpi.ca"
   ],
   "abilities": {
     "stay": true

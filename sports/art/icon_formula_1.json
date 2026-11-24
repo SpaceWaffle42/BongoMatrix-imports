@@ -1,0 +1,3 @@
+{"format":"bongo-animation","version":1,"name":"icon_formula_1","width":7,"height":7,"background":"#000000","loop":"loop","palette":["#f0ece4","#5a5a64","#9aa0a8"],"layers":[{"name":"Art","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":200,"cels":["2 0 1 0 1 0 1 2 1 0 1 0 1 0 2 0 1 0 1 0 1 2 1 0 1 0 1 0 2 6*. 2 6*. 2 6*."]}
+]}

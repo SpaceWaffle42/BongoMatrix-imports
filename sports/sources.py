@@ -45,14 +45,33 @@ class Trouble(Exception):
     "missing" (no such thing), "limit" (asked too often; ``wait`` seconds), "offline", "answer" (not what was
     expected). Never carries an address or a key."""
 
+    MOST_WAIT = 3600.0       # a service asking us to wait longer than an hour is asked again in an hour
+
     def __init__(self, kind, wait=0.0):
         super().__init__(kind)
-        self.kind, self.wait = kind, float(wait)
+        try:
+            wait = float(wait)
+        except (TypeError, ValueError):
+            wait = 0.0
+        self.kind, self.wait = kind, max(0.0, min(self.MOST_WAIT, wait if wait == wait else 0.0))
+
+
+def header(headers, name):
+    """A response header, whatever case the service wrote its name in."""
+    want = name.lower()
+    return next((v for k, v in (headers or {}).items() if str(k).lower() == want), None)
 
 
 # -- small readers --------------------------------------------------------------------------------------------
 def text(value, most=60):
-    return value.strip()[:most] if isinstance(value, str) else ""
+    """A string from an answer, at most ``most`` characters, shortened at a space so no word is ever cut."""
+    if not isinstance(value, str):
+        return ""
+    value = value.strip()
+    if len(value) <= most:
+        return value
+    cut = value[:most + 1].rsplit(" ", 1)[0].rstrip(" ,;:-(")
+    return cut if " " in value[:most + 1] else value[:most]
 
 
 def whole(value):
@@ -85,7 +104,7 @@ def code_of(name, short=None):
 
 
 COLOUR_WORDS = {
-    "red": "#D21E28", "white": "#FFFFFF", "blue": "#1E5AC8", "black": "#3C3C42", "yellow": "#FAD228", "green": "#1E9646",
+    "red": "#D21E28", "white": "#FFFFFF", "blue": "#1E5AC8", "black": "#5A5A64", "yellow": "#FAD228", "green": "#1E9646",
     "orange": "#F58220", "purple": "#6E3CB4", "claret": "#7A1F3D", "maroon": "#7A1F3D", "burgundy": "#7A1F3D", "garnet": "#7A1F3D",
     "navy": "#1F2F6E", "sky": "#6CB4EE", "gold": "#D4AF37", "amber": "#FFB547", "pink": "#F06EAA", "grey": "#9AA0A8", "gray": "#9AA0A8",
     "silver": "#C0C4CC", "brown": "#7B4A1E", "violet": "#6E3CB4", "crimson": "#B4142D", "scarlet": "#D21E28", "royal": "#1E5AC8",
@@ -100,8 +119,15 @@ def lift(colour):
     except (ValueError, TypeError, IndexError):
         return GREY
     if max(r, g, b) < 70:
-        return "#3C3C42"
+        return "#5A5A64"
+    light = 0.3 * r + 0.59 * g + 0.11 * b
+    if light < DIM:                                     # a very dark colour (navy): brightened, keeping its hue
+        k = DIM / max(1.0, light)
+        r, g, b = (min(255, round(v * k)) for v in (r, g, b))
     return f"#{r:02X}{g:02X}{b:02X}"
+
+
+DIM = 75                                                # the least brightness a kit colour is shown at
 
 
 def colours_from_words(words):
@@ -116,7 +142,7 @@ def colours_from_words(words):
             named = [COLOUR_WORDS["navy"]]
         if named:
             found.append(named[0])
-    found = found[:2]
+    found = [lift(c) for c in found[:2]]
     return [found[0], found[-1]] if found else [GREY, GREY]
 
 
@@ -157,7 +183,14 @@ def epoch(stamp):
         return None
     if when.tzinfo is None:
         when = when.replace(tzinfo=dt.timezone.utc)
-    return int(when.timestamp())
+    try:
+        seconds = int(when.timestamp())
+    except (OverflowError, ValueError, OSError):
+        return None
+    return seconds if FIRST <= seconds < LAST else None      # (a date far off is a mistake: never shown, never an overflow)
+
+
+FIRST, LAST = 631152000, 4102444800                          # 1990 to 2100
 
 
 def minutes(value):
@@ -169,14 +202,14 @@ def minutes(value):
 
 
 def surname(name):
-    return text(name).split(" ")[-1].upper()[:12] if text(name) else ""
+    return text(name, 120).split(" ")[-1].upper() if text(name) else ""
 
 
 # -- football-data.org ----------------------------------------------------------------------------------------
 class FootballData:
-    """football-data.org, API v4. The key goes in the X-Auth-Token header. The free plan: 12 competitions,
+    """football-data.org, API v4 (https://docs.football-data.org/general/v4/index.html). The key goes in the X-Auth-Token header. The free plan: 12 competitions,
     10 requests a minute, fixtures and tables, scores "delayed"; live scores are a paid plan."""
-    id = "football_data"
+    id = feed_id = "football_data"
     name = "football-data.org"
     short = "FOOTBALL-DATA"
     host = "api.football-data.org"
@@ -184,6 +217,7 @@ class FootballData:
     gap = 7.0               # seconds between requests: under the free plan's 10 a minute
     live_every = 60.0       # seconds between looks at a match in play
     has_table = True
+    needs_key = True
     LEAGUES = ("PL", "ELC", "BL1", "SA", "PD", "FL1", "DED", "PPL", "BSA")   # the free plan's leagues (it also has CL, WC, EC)
 
     def headers(self, key):
@@ -192,7 +226,7 @@ class FootballData:
     def trouble(self, status, body, headers):
         said = text(body.get("message") if isinstance(body, dict) else "", 200).lower()
         if status == 429:
-            return Trouble("limit", whole(headers.get("X-RequestCounter-Reset")) or 60)
+            return Trouble("limit", whole(header(headers, "X-RequestCounter-Reset")) or 60)
         if status == 401 or (status in (400, 403) and "token" in said):
             return Trouble("refused")
         if status == 403:
@@ -338,21 +372,42 @@ class FootballData:
 # -- TheSportsDB ----------------------------------------------------------------------------------------------
 class TheSportsDB:
     """TheSportsDB, API v2, which is for its Premium subscribers only: the key goes in the X-API-KEY header.
-    (Its free key is one test key everyone shares, "123", on the old v1 API, with one fixture and five table rows
-    an answer: too little for this screen, and v1 wants the key in the address. So this needs the Premium key.)
-    Its league table is only on v1, so there is no table from here."""
+    https://www.thesportsdb.com/documentation (read 23 Nov 2026): "V2 ... only for premium subscribers"; search,
+    lookup, schedule (next/previous for a team or a league, 10 an answer) and livescore (by sport or league).
+    Its free key ("123") is a test key everyone shares, on the old v1 API only, with one fixture an answer: too
+    little for any of these screens, and v1 wants the key in the address. So this needs the Premium key, and the
+    free one is never offered. Its league table is only on v1, so there is no table from here.
+
+    One of these for each team sport (``sport``, a key of sports.SPORTS). They share one key and one limit
+    (``id``); a feed is named by ``feed_id``, so a cricket team and a football team of the same name don't mix."""
     id = "thesportsdb"
     name = "TheSportsDB"
     short = "THESPORTSDB"
     host = "www.thesportsdb.com"
     base = "https://www.thesportsdb.com/api/v2/json"
     gap = 2.0               # seconds between requests: far under Premium's 100 a minute
-    live_every = 120.0      # its live scores are "2 min livescore": asking sooner gets the same answer
     has_table = False
+    needs_key = True
     STATUS = {"NS": "scheduled", "TBD": "scheduled", "1H": "live", "2H": "live", "LIVE": "live", "HT": "half_time", "ET": "extra_time",
               "BT": "break", "P": "penalties", "FT": "finished", "AET": "finished", "PEN": "finished", "AWD": "finished", "WO": "finished",
               "PST": "postponed", "CANC": "cancelled", "ABD": "cancelled", "SUSP": "suspended", "INT": "suspended",
-              "NOT STARTED": "scheduled", "MATCH FINISHED": "finished", "POSTPONED": "postponed", "CANCELLED": "cancelled"}
+              "NOT STARTED": "scheduled", "MATCH FINISHED": "finished", "POSTPONED": "postponed", "CANCELLED": "cancelled",
+              "AOT": "finished", "AP": "finished", "FT/OT": "finished", "AFTER OT": "finished", "FINAL": "finished", "F/OT": "finished"}
+    # Periods of the other sports' live scores (quarters, periods, innings, overtime): in play.
+    PLAYING = re.compile(r"(Q[1-4]|[1-4]Q|OT\d?|P[1-3]|[1-3]P|SO|PT|BT|IN\d{1,2}|T\d{1,2}|B\d{1,2}|TOP \d{1,2}|BOT \d{1,2}|"
+                         r"[1-9](ST|ND|RD|TH)( (HALF|QUARTER|PERIOD|INNING))?)")
+    OVERTIME = ("AOT", "FT/OT", "AFTER OT", "F/OT")
+
+    def __init__(self, sport="football"):
+        from .sports import SPORTS
+        self.sport = sport if sport in SPORTS and SPORTS[sport]["kind"] == "team" else "football"
+        self.strsport = SPORTS[self.sport]["tsdb"].lower()
+        self.feed_id = self.id if self.sport == "football" else f"{self.id}:{self.sport}"   # (football's: as in 1.x, so its cache still counts)
+        self.live_every = 120.0 if SPORTS[self.sport]["live"] else None   # its live scores are "2 min livescore": asking sooner gets the same answer
+
+    def ours(self, raw):
+        """Whether a row is of this screen's sport (a row that doesn't say is taken as ours)."""
+        return text(raw.get("strSport")).lower() in (self.strsport, "")
 
     def headers(self, key):
         return {"X-API-KEY": key}
@@ -389,7 +444,7 @@ class TheSportsDB:
             slug = re.sub(r"[^a-z0-9]+", "_", plain(query) or query.lower()).strip("_")
             if not slug:
                 raise Trouble("missing")
-            rows = [r for r in self.rows(get(f"/search/team/{slug}", keep=30 * 86400)) if text(r.get("strSport")).lower() in ("soccer", "")]
+            rows = [r for r in self.rows(get(f"/search/team/{slug}", keep=30 * 86400)) if self.ours(r)]
             teams = [(r, self._team(r)) for r in rows]
             one = best(query, [((r.get("strTeam"), r.get("strTeamShort"), r.get("strTeamAlternate")), t) for r, t in teams if t])
             found = [one] if one else [t for _, t in teams[:1]]
@@ -412,15 +467,25 @@ class TheSportsDB:
         return {"id": ident, "name": text(name), "code": known.get(ident + ":code") or code_of(text(name) or "???"),
                 "colours": known.get(ident, [GREY, GREY])}
 
-    def match(self, get, raw, known):
+    def state_of(self, status, live=False):
+        """A state of STATES from TheSportsDB's strStatus, or None. ``live``: the row is from its live scores, where
+        a period we don't know the name of is still a game in play."""
+        state = self.STATUS.get(status)
+        if state is None and status and (self.PLAYING.fullmatch(status) or live):
+            state = "live"
+        return state
+
+    def match(self, get, raw, known, live=False):
         kickoff = epoch(raw.get("strTimestamp")) or epoch(f"{text(raw.get('dateEvent'))}T{text(raw.get('strTime')) or '00:00:00'}")
         if whole(raw.get("idEvent")) is None or kickoff is None:
             return None
         status = text(raw.get("strStatus")).upper()
-        state = self.STATUS.get(status)
+        state = self.state_of(status, live)
         home, away = whole(raw.get("intHomeScore")), whole(raw.get("intAwayScore"))
         if text(raw.get("strPostponed")).lower() == "yes":
             state = "postponed"
+        if not self.live_every and state in IN_PLAY:   # no live scores for this sport: a schedule saying "in play" is
+            state = "scheduled"                        # only "started"; nothing is drawn as LIVE and it isn't watched
         if state is None:                       # a status we don't know: by its score, if it has one
             state = "finished" if home is not None and away is not None else "scheduled"
         score = None
@@ -430,19 +495,24 @@ class TheSportsDB:
             elif raw.get("intHomeScore") in (None, "") and raw.get("intAwayScore") in (None, ""):
                 score = [0, 0]                  # (no score at all yet: 0-0. One that can't be read: None, so the last one stays)
         minute, added = minutes(raw.get("strProgress")) if state in IN_PLAY else (None, None)
+        period = None
+        if state in IN_PLAY and minute is None and self.sport != "football":       # Q3, P2, TOP 5TH: said as it is
+            period = text(raw.get("strProgress"), 8).upper() or (status if self.PLAYING.fullmatch(status) else None)
+        after = {"AET": "extra_time", "PEN": "penalties"}.get(status) if self.sport == "football" else ("overtime" if status in self.OVERTIME else None)
+        said = text(text(raw.get("strResult"), 400).split("\n")[0], 120) if state == "finished" else ""
         return {"id": str(whole(raw["idEvent"])), "kickoff": kickoff, "timed": status != "TBD" and bool(text(raw.get("strTime")) or raw.get("strTimestamp")),
                 "state": state, "home": self.side(get, raw.get("idHomeTeam"), raw.get("strHomeTeam"), known),
                 "away": self.side(get, raw.get("idAwayTeam"), raw.get("strAwayTeam"), known),
                 "league": {"id": str(whole(raw.get("idLeague")) or ""), "name": text(raw.get("strLeague"))},
-                "score": score, "pens": None, "after": {"AET": "extra_time", "PEN": "penalties"}.get(status) if state == "finished" else None,
-                "minute": minute, "added": added, "goal": None}
+                "score": score, "pens": None, "after": after if state == "finished" else None,
+                "minute": minute, "added": added, "goal": None, **({"period": period} if period else {}), **({"said": said} if said else {})}
 
     def fixtures(self, get, team, today):
         known = {team["id"]: team["colours"], team["id"] + ":code": team["code"]}
         found = {}
         for path in (f"/schedule/previous/team/{team['id']}", f"/schedule/next/team/{team['id']}"):
             for raw in self.rows(get(path)):
-                if text(raw.get("strSport")).lower() not in ("soccer", ""):
+                if not self.ours(raw):
                     continue
                 match = self.match(get, raw, known)
                 if match:
@@ -458,7 +528,7 @@ class TheSportsDB:
                  match["home"]["id"] + ":code": match["home"]["code"], match["away"]["id"] + ":code": match["away"]["code"]}
         for raw in self.rows(get(f"/livescore/{league}")):
             if str(whole(raw.get("idEvent"))) == match["id"]:
-                now = self.match(get, {**raw, "strTimestamp": dt.datetime.fromtimestamp(match["kickoff"], dt.timezone.utc).isoformat()}, known)
+                now = self.match(get, {**raw, "strTimestamp": dt.datetime.fromtimestamp(match["kickoff"], dt.timezone.utc).isoformat()}, known, live=True)
                 if now:
                     return {**now, "kickoff": match["kickoff"], "timed": match["timed"], "league": match["league"]}
         return None
@@ -467,4 +537,23 @@ class TheSportsDB:
         return []
 
 
-SOURCES = {s.id: s for s in (FootballData(), TheSportsDB())}
+SOURCES = {s.id: s for s in (FootballData(), TheSportsDB())}      # (football's two: the Source setting's choices)
+
+
+def source_for(sport, source="football_data", tour=None):
+    """The source a screen of ``sport`` uses: for football the one chosen, for the other team sports TheSportsDB,
+    for Formula 1 Jolpica-F1, for tennis and golf the tour on TheSportsDB."""
+    from .sports import SPORTS, tour_for
+    kind = SPORTS.get(sport, SPORTS["football"])["kind"]
+    if kind == "championship":
+        from .f1 import JOLPICA
+        return JOLPICA
+    if kind == "tour":
+        from .tours import tour_source
+        return tour_source(tour_for(sport, tour))
+    if sport in (None, "football") or sport not in SPORTS:
+        return SOURCES.get(source) or SOURCES["football_data"]
+    return _TEAMS.setdefault(sport, TheSportsDB(sport))
+
+
+_TEAMS = {}

@@ -1,6 +1,6 @@
 """A made-up match, for the screen's preview before it has been set up (and the test screen at import): the
 six frames of the design, with two teams that don't exist. Never shown on the panel itself."""
-from . import draw
+from . import art, draw
 
 SECONDS = 3.0
 HOME = {"id": "1", "name": "Northtown FC", "code": "NTH", "colours": ["#C81E28", "#FFFFFF"]}
@@ -10,11 +10,12 @@ TABLE = [{"pos": 3, "id": "3", "code": "CTY", "points": 30}, {"pos": 4, "id": "1
 
 
 def frames(ctx):
+    icon = art.icon("football")
     return [
-        lambda: draw.fixture(ctx, HOME, AWAY, ("SAT 21 NOV", "21 NOV"), "KO 15:00"),
+        lambda: draw.fixture(ctx, HOME, AWAY, ("SAT 21 NOV", "21 NOV"), "KO 15:00", icon=icon),
         lambda: draw.scoreline(ctx, HOME, AWAY, [2, 1], "LIVE", draw.RED, ("GOAL 64' SMITH", "GOAL 64'"), draw.AMBER, minute="67'", dot=True),
-        lambda: draw.scoreline(ctx, HOME, AWAY, [1, 1], "HALF TIME", draw.AMBER),
-        lambda: draw.scoreline(ctx, HOME, AWAY, [3, 1], "FULL TIME", draw.GREEN, ("4TH IN TABLE", "4TH")),
+        lambda: draw.scoreline(ctx, HOME, AWAY, [1, 1], "HALF TIME", draw.AMBER, icon=icon),
+        lambda: draw.scoreline(ctx, HOME, AWAY, [3, 1], "FULL TIME", draw.GREEN, ("4TH IN TABLE", "4TH"), icon=icon),
         lambda: draw.table(ctx, TABLE, "1"),
-        lambda: draw.fixture(ctx, HOME, AWAY, ("SAT 21 NOV", "21 NOV"), ("POSTPONED", "OFF"), draw.RED),
+        lambda: draw.fixture(ctx, HOME, AWAY, ("SAT 21 NOV", "21 NOV"), ("POSTPONED", "OFF"), draw.RED, icon=icon),
     ]
