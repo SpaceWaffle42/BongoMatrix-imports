@@ -1,0 +1,4 @@
+{"format":"bongo-animation","version":1,"name":"parcels_van","width":14,"height":5,"background":"#000000","loop":"loop","palette":["#4a4f58","#5c616a","#9aa1ac","#9fd8ff","#f2eee6","#ffb547"],"layers":[{"name":"Van","on":true,"opacity":1,"mode":"normal","shared":false},{"name":"Trail","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":120,"cels":["4*. 6*4 8*. 6*4 2*3 6*. 6*4 2*3 4 5*. 9*4 5 5*. 0 2 4*. 0 2 .","15*. 2*1 25*. 2*1 26*."]},
+{"ms":120,"cels":["4*. 6*4 8*. 6*4 2*3 6*. 6*4 2*3 4 5*. 9*4 5 5*. 2 0 4*. 2 0 .","14*. 2*1 27*. 2*1 25*."]}
+]}

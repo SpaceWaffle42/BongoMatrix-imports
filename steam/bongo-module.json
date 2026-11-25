@@ -1,0 +1,39 @@
+{
+  "id": "steam",
+  "name": "Steam",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Friends online and what they're playing, the game's picture, your recent games and newest achievement.",
+  "network": [
+    "api.steampowered.com",
+    "store.steampowered.com",
+    "shared.akamai.steamstatic.com",
+    "shared.fastly.steamstatic.com",
+    "shared.cloudflare.steamstatic.com"
+  ],
+  "api": 3,
+  "abilities": {
+    "background": true,
+    "controls": ["status", "message"],
+    "settings": {
+      "fields": [
+        {"name": "api_key", "type": "text", "label": "Steam Web API key",
+         "note": "Free, from steamcommunity.com/dev/apikey (the README says how)"},
+        {"name": "profile", "type": "text", "label": "Your Steam profile", "max": 200,
+         "note": "Your profile link (steamcommunity.com/id/... or /profiles/...) or your SteamID64"},
+        {"name": "only_friends", "type": "text", "label": "Only these friends", "max": 200,
+         "note": "Their Steam names, with commas between. Leave it empty for all your friends"},
+        {"name": "show_away", "type": "bool", "label": "Show friends who are away", "default": false},
+        {"name": "pop_up", "type": "bool", "label": "Pop-up: a friend starts a game", "default": false,
+         "note": "Their name and the game, for a few seconds. Never in the sleep hours"}
+      ],
+      "table": {"title": "What it asks Steam", "rows": [
+        ["Who's online and what they're playing: every minute", "friends"],
+        ["Your friend list: every half hour", "friends"],
+        ["Your games of the last two weeks: every 10 minutes", "games"],
+        ["Your newest achievement and how rare it is: every 15 minutes", "games"],
+        ["Each game's picture and icon: once, then kept", "pictures"]]},
+      "note": "About 2,000 calls a day, well inside the free key's 100,000. For friends' games, your playtime and achievements to show, your profile, friends list and game details have to be Public in Steam's privacy settings; the status line says which part it can't see."
+    }
+  }
+}

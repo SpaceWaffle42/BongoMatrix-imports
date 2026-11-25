@@ -39,13 +39,19 @@ down, no deeper.
 |---|---|---|
 | `aquarium/` | Aquarium | A tank of fish to leave alone or play with: feed, tap the glass, add or remove a fish |
 | `crypto_ticker/` | Crypto ticker | Coin prices on the panel |
+| `drawing_wall/` | Drawing wall | Draw on the panel from your phone, live: several phones at once, a history of the last few, and a pop-up when one is sent if you like. Runs in the background and has its own page for drawing |
 | `home_assistant/` | Home Assistant | The Matrix appears in Home Assistant through your MQTT broker: the panel as a light, the screen playing, Pause, Next and messages. Runs in the background and reaches one device on your home network (the broker) |
 | `iss_tracker/` | ISS Tracker | Where the International Space Station is now |
+| `parcels/` | Parcels | Parcels on their way: arrives today, out for delivery, delivered. Needs a free Ship24 key (DHL and UPS keys optional). Pop-ups are never shown in the sleep hours |
+| `phone_notifications/` | Phone notifications | A short pop-up over the playlist when your phone gets a notification, and the last few on a screen. Your phone sends them through ntfy.sh |
 | `pomodoro/` | Pomodoro | A focus timer: work and break rounds |
 | `sports/` | Sports | Ten sports (football, cricket, rugby union, tennis, Formula 1, golf, American football, basketball, ice hockey, baseball): next match, live score where there is one, result, and a countdown to the Olympics and Paralympics. Football and Formula 1 need no paid key; the others need your own TheSportsDB Premium key. May keep the panel while a match is live |
+| `steam/` | Steam | Friends online and what they are playing, the game's picture, your recent games and newest achievement. Needs your own free Steam Web API key |
 | `word_of_the_day/` | Word of the day | A new word and its meaning each day |
 
 Each module's own README says how to set it up.
+
+Drawing wall, Parcels, Phone notifications and Steam were made for module API 3 (module pages, pop-ups in a module's own look, privacy). A Matrix that is older than that says it needs updating before it will import them.
 
 ## Importing on a Matrix
 

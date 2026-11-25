@@ -1,0 +1,37 @@
+{
+  "id": "parcels",
+  "name": "Parcels",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Parcels on their way: arrives today, out for delivery, delivered.",
+  "network": ["api.ship24.com", "api-eu.dhl.com", "onlinetools.ups.com"],
+  "api": 3,
+  "abilities": {
+    "background": true,
+    "controls": ["status", "message"],
+    "settings": {
+      "fields": [
+        {"name": "parcel_1", "type": "text", "label": "Parcel 1", "max": 200,
+         "note": "A tracking number, or the whole tracking link from the courier's email or text, then a nickname: JD0002240145 New boots"},
+        {"name": "parcel_2", "type": "text", "label": "Parcel 2", "max": 200,
+         "note": "A comma between them if the number has spaces in it: AB 1234 5678 9GB, Printer ink"},
+        {"name": "parcel_3", "type": "text", "label": "Parcel 3", "max": 200},
+        {"name": "parcel_4", "type": "text", "label": "Parcel 4", "max": 200,
+         "note": "Empty a box once its parcel has come (delivered ones leave the panel by themselves)."},
+        {"name": "ship24_key", "type": "text", "label": "Ship24 key",
+         "note": "Free from ship24.com: choose the free Tracking API plan, then Developers > API keys. Covers every courier."},
+        {"name": "dhl_key", "type": "text", "label": "DHL key (optional)",
+         "note": "Free from developer.dhl.com (Shipment Tracking - Unified). DHL parcels then don't use Ship24's 10."},
+        {"name": "ups_client_id", "type": "text", "label": "UPS client ID (optional)",
+         "note": "Free from developer.ups.com: an app with the Tracking API. UPS parcels then don't use Ship24's 10."},
+        {"name": "ups_secret", "type": "text", "label": "UPS client secret (optional)"},
+        {"name": "every", "type": "int", "label": "Check every (minutes)", "limits": [10, 240], "default": 15,
+         "note": "Checking a parcel it already follows costs nothing. DHL parcels are checked less often if needed, to stay in DHL's free 250 a day."},
+        {"name": "keep_days", "type": "int", "label": "Keep delivered (days)", "limits": [1, 14], "default": 2},
+        {"name": "popup_out", "type": "bool", "label": "Pop-up when out for delivery", "default": true},
+        {"name": "popup_delivered", "type": "bool", "label": "Pop-up when delivered", "default": true}
+      ],
+      "note": "Ship24's free plan follows 10 new parcels a month; a parcel past that waits until the 1st, and nothing is ever paid for. Only the tracking number is sent: a pasted link is read on the Matrix. Pop-ups never come in the sleep hours: they wait until the hours end, and are dropped if they're no longer news."
+    }
+  }
+}

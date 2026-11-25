@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drawing wall</title>
+<style>
+  /* The dashboard's own colours, carried here (this page is sealed off from the dashboard and can't load its CSS). */
+  :root {
+    --page:#0B0C0E; --card:#131519; --well:#08090A; --raise:#1A1D22; --line:#22262C; --line-2:#2C3139;
+    --text:#ECEEF1; --soft:#C9CED6; --muted:#9AA1AC; --faint:#8A919C;
+    --amber:#FFB547; --amber-hover:#FFCB7A; --ink:#1A1300; --amber-bg:#2A2114;
+    --danger:#FF8A92; --danger-bg:#2A1517; --danger-line:#5A2A2E; --ok:#4ADE80;
+    --ui: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--page); color:var(--text); font:14px/1.45 var(--ui); }
+  body { padding:10px; }
+  .wrap { display:flex; flex-direction:column; gap:10px; max-width:760px; margin:0 auto; }
+  .who { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--soft); min-height:22px; flex-wrap:wrap; }
+  .who .d { width:9px; height:9px; display:inline-block; flex:none; }
+  .who b { font-weight:600; }
+  .who .here { margin-left:auto; color:var(--ok); font-size:12px; }
+  .boardw { background:var(--well); border:1px solid var(--line-2); padding:4px; display:flex; justify-content:center; }
+  #board { display:block; image-rendering:pixelated; touch-action:none; cursor:crosshair; }   /* sized to fit by fit() */
+  .tools { display:flex; flex-direction:column; gap:9px; }
+  .pal { display:grid; grid-template-columns:repeat(5, minmax(44px, 1fr)); gap:6px; }
+  .pal button { height:44px; border:1px solid var(--line-2); padding:0; cursor:pointer; border-radius:0; min-width:44px; }
+  .pal button.sel { outline:2px solid var(--amber); outline-offset:2px; }
+  .pal button.eraser { background:repeating-conic-gradient(#2a2e35 0 25%, #15181c 0 50%) 0 0 / 10px 10px; display:grid; place-items:center; color:var(--soft); }
+  .trow { display:flex; gap:6px; align-items:stretch; }
+  .seg { display:flex; gap:3px; padding:3px; background:var(--page); border:1px solid var(--line); flex:1 1 auto; }
+  .seg button { flex:1 1 auto; min-height:44px; border:0; background:transparent; color:var(--muted); font:13px var(--ui); cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--amber-bg); color:var(--amber-hover); box-shadow:inset 0 0 0 1px var(--amber); }
+  .ib { width:56px; min-height:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; background:var(--raise); border:1px solid var(--line-2); color:var(--soft); padding:2px 0; cursor:pointer; flex:none; font:11px var(--ui); }
+  .ib:hover { border-color:var(--muted); color:var(--text); }
+  .input { width:100%; min-width:0; min-height:42px; padding:8px 12px; border:1px solid var(--line-2); background:var(--page); color:var(--text); font:14px var(--ui); border-radius:0; }
+  .input:focus { outline:none; border-color:var(--amber); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:8px 14px; border:1px solid var(--line-2); background:var(--raise); color:var(--text); font:500 14px var(--ui); cursor:pointer; white-space:nowrap; border-radius:0; }
+  .btn:hover { border-color:#3A3F47; background:#20242A; }
+  .btn.danger { background:var(--danger-bg); border-color:var(--danger-line); color:var(--danger); }
+  .btn.danger:hover { background:#3A1C1F; }
+  .fin { display:flex; align-items:center; justify-content:center; gap:10px; min-height:52px; background:var(--amber); border:1px solid var(--amber); color:var(--ink); cursor:pointer; text-align:left; font:inherit; width:100%; }
+  .fin:hover { background:var(--amber-hover); }
+  .fin .t { display:flex; flex-direction:column; line-height:1.2; }
+  .fin b { font-size:15px; } .fin small { font-size:11.5px; color:#5a4210; }
+  .hist .lab { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 6px; }
+  .hist .lab span { text-transform:none; letter-spacing:0; font-weight:400; }
+  .hist .row { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; }
+  .hist button { padding:2px; background:var(--well); border:1px solid var(--line-2); cursor:pointer; flex:none; color:var(--muted); font:11px var(--ui); display:flex; flex-direction:column; gap:2px; }
+  .hist button:hover { border-color:var(--amber); }
+  .hist canvas { height:42px; width:auto; display:block; image-rendering:pixelated; }
+  .hist .empty { color:var(--faint); font-size:12px; }
+  .toast { font-size:12.5px; color:var(--soft); min-height:18px; }
+  /* Clear asks first (the council: 4-0): a question over the wall, answered with a button */
+  .ask { position:fixed; inset:0; z-index:5; display:none; align-items:center; justify-content:center; padding:10px; background:rgba(8,9,10,.86); }
+  .ask.on { display:flex; }
+  .ask .box { background:var(--card); border:1px solid var(--danger-line); padding:14px; max-width:340px; display:flex; flex-direction:column; gap:10px; }
+  .ask .box b { font-size:15px; }
+  .ask .box p { margin:0; color:var(--soft); font-size:13px; }
+  .ask .acts { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .off { display:none; padding:18px; border:1px solid var(--line); background:var(--card); color:var(--soft); }
+  body.is-off .off { display:block; }
+  body.is-off .wrap { display:none; }
+  /* Wider than it is tall (a phone turned sideways, a computer): the tools beside the wall, and the wall as big as
+     the height allows. Keyed on this page's own shape, which is the frame the dashboard gives it, not the screen. */
+  @media (min-aspect-ratio: 5/4) {
+    body { padding:8px; }
+    .wrap { display:grid; grid-template-columns:minmax(0, 1fr) 262px; grid-template-areas:"who tools" "board tools" "hist tools"; gap:8px 12px; align-items:start; max-width:1200px; }
+    .who { grid-area:who; } .boardw { grid-area:board; } .tools { grid-area:tools; } .hist { grid-area:hist; }
+    .tools { gap:7px; }
+    .fin { min-height:46px; }
+  }
+</style>
+</head>
+<body>
+<div class="off" id="off">Drawing wall is switched off. Switch it on in Settings › Modules, then open this page again.</div>
+<div class="wrap">
+  <div class="who" id="who"><span class="d" id="mydot"></span><span id="me">Joining the wall…</span><span id="drawing"></span><span class="here" id="here"></span></div>
+  <div class="boardw">
+    <canvas id="board" width="640" height="320" aria-label="The wall: draw here"></canvas>
+    <div class="ask" id="ask" role="dialog" aria-modal="true" aria-labelledby="askt">
+      <div class="box">
+        <b id="askt">Clear the wall for everyone?</b>
+        <p>It goes from the panel and from every phone drawing on it. To keep it, press Send first: it goes in the history.</p>
+        <div class="acts"><button class="btn" type="button" id="keepit">Keep it</button><button class="btn danger" type="button" id="clearit">Clear it</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="tools">
+    <div class="pal" id="pal" role="group" aria-label="Colours"></div>
+    <div class="trow">
+      <div class="seg" role="group" aria-label="Pen size">
+        <button type="button" aria-pressed="true" data-size="1">Thin</button><button type="button" aria-pressed="false" data-size="2">Thick</button>
+      </div>
+      <button class="ib" type="button" id="undo" title="Undo your last line"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg>Undo</button>
+      <button class="ib" type="button" id="clear" title="Clear the wall (it asks first)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Clear</button>
+    </div>
+    <div class="trow">
+      <input class="input" id="textin" maxlength="60" placeholder="Write something" autocomplete="off" enterkeyhint="done" aria-label="Words to put on the wall">
+      <button class="btn" type="button" id="add">Add</button>
+    </div>
+    <button class="fin" id="send" type="button"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-3-6z"/></svg><span class="t"><b>Send</b><small id="sendsmall">Keeps it in the history</small></span></button>
+    <div class="toast" id="toast" aria-live="polite"></div>
+  </div>
+  <div class="hist">
+    <p class="lab">Wall history <span>(pick one to put it back up)</span></p>
+    <div class="row" id="hist"><span class="empty">Nothing sent yet.</span></div>
+  </div>
+</div>
+<script>
+'use strict';
+// Everything this page can do: tell its module something, and hear back. The dashboard round it passes both on,
+// checked: at most 2 KB a message and 20 a second from this browser, so dots go in small batches, 10 a second.
+const PAL = [null, '#F2EEE6', '#FF4A4A', '#FF9A2E', '#FFD84A', '#5AD04A', '#4AC8FF', '#5A6CFF', '#B07AFF', '#FF7AC8'];
+const NAMES = [null, 'White', 'Red', 'Orange', 'Yellow', 'Green', 'Sky blue', 'Blue', 'Purple', 'Pink'];
+const CELL = 10, BATCH_MS = 100, MOST = 400, PEN_SHOWS = 1500;
+const $ = (id) => document.getElementById(id);
+const board = $('board'), bctx = board.getContext('2d');
+
+let W = 64, H = 32, grid = new Uint8Array(W * H), incoming = null;
+let me = null, myColour = 3, colour = 1, size = 1, pop = false;
+const pens = {};            // another phone's pen: by -> {x, y, who, pc, at}
+
+// -- talking to the module ---------------------------------------------------------------------------------------
+const bucket = { tokens: 30, at: performance.now() };
+function send(data) {
+  const now = performance.now();
+  bucket.tokens = Math.min(30, bucket.tokens + (now - bucket.at) * 0.015); bucket.at = now;   // (15 a second, 30 at once)
+  if (bucket.tokens < 1) return false;
+  bucket.tokens -= 1;
+  parent.postMessage({ type: 'send', data }, '*');
+  return true;
+}
+let lineId = Math.floor(Math.random() * 1e6), line = null, last = null;
+const outbox = [];          // dots drawn here and not yet sent: [{id, c, w, p: [x, y, ...], e}]
+function flush() {
+  while (outbox.length) {
+    const part = outbox[0], drawing = part === line;
+    if (drawing && !part.p.length) return;         // still drawing, nothing new yet
+    const p = part.p.slice(0, MOST);
+    const msg = { t: 'd', id: part.id, c: part.c, w: part.w, p };
+    if (p.length === part.p.length && part.e) msg.e = 1;   // (its end: the other phones hear its last dots at once)
+    if (!send(msg)) return;                        // (too fast: the rest goes with the next batch)
+    part.p = part.p.slice(p.length);
+    if (!part.p.length && !drawing) outbox.shift();
+  }
+}
+setInterval(flush, BATCH_MS);
+
+// -- the wall on the page ----------------------------------------------------------------------------------------
+function resize(w, h) {
+  if (w === W && h === H) return;
+  W = w; H = h; grid = new Uint8Array(W * H);
+  board.width = W * CELL; board.height = H * CELL;
+  fit();
+}
+// The wall as big as fits: the width it has, and, sideways, the height left under the line above it (so the whole
+// wall and every tool are in view without scrolling); upright, at most most of the height.
+function fit() {
+  const box = board.parentElement, side = matchMedia('(min-aspect-ratio: 5/4)').matches;
+  const room = box.clientWidth - 10;
+  const tall = side ? innerHeight - box.getBoundingClientRect().top - 74 : innerHeight * 0.62;
+  const k = Math.max(1, Math.min(room / W, Math.max(60, tall) / H));
+  board.style.width = `${Math.floor(W * k)}px`; board.style.height = `${Math.floor(H * k)}px`;
+}
+addEventListener('resize', fit);
+let here = [];
+function showHere() {                // who else has the page open
+  const others = here.filter((n) => !me || n !== me.name);
+  $('here').textContent = others.length ? `● Also here: ${others.join(', ')}` : '';
+}
+function dot(g, x, y, c, w) {
+  for (let b = 0; b < w; b++) for (let a = 0; a < w; a++) {
+    const X = x + a, Y = y + b;
+    if (X >= 0 && Y >= 0 && X < W && Y < H) g[Y * W + X] = c;
+  }
+}
+function decode(text, n) {           // the module's pictures: digits, or runs (a letter for the colour, then how many)
+  const out = new Uint8Array(n);
+  if (/^\d*$/.test(text)) { for (let i = 0; i < Math.min(n, text.length); i++) out[i] = text.charCodeAt(i) - 48; return out; }
+  let i = 0;
+  for (const [, c, k] of text.matchAll(/([a-j])(\d*)/g)) { const v = c.charCodeAt(0) - 97; for (let j = 0, m = k ? +k : 1; j < m && i < n; j++) out[i++] = v; }
+  return out;
+}
+let drawPending = false;
+function redraw() { if (!drawPending) { drawPending = true; requestAnimationFrame(paint); } }
+function paint() {
+  drawPending = false;
+  bctx.fillStyle = '#08090A'; bctx.fillRect(0, 0, board.width, board.height);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const c = grid[y * W + x];
+    bctx.fillStyle = c ? PAL[c] : ((x >> 3) + (y >> 3)) % 2 ? '#121418' : '#0f1114';   // (an 8-dot check, to judge sizes)
+    bctx.fillRect(x * CELL + 0.5, y * CELL + 0.5, CELL - 1, CELL - 1);
+  }
+  const now = performance.now(), drawing = [];
+  for (const [by, pen] of Object.entries(pens)) {   // other phones' pens, faintly, where their fingers are
+    if (now - pen.at > PEN_SHOWS) continue;
+    drawing.push(pen);
+    bctx.strokeStyle = PAL[pen.pc] || PAL[1]; bctx.lineWidth = 2;
+    bctx.strokeRect(pen.x * CELL - 2, pen.y * CELL - 2, CELL * (pen.w || 1) + 4, CELL * (pen.w || 1) + 4);
+  }
+  $('drawing').innerHTML = '';
+  for (const pen of drawing) {
+    const s = document.createElement('span'); s.style.color = PAL[pen.pc];
+    s.textContent = `${pen.who.charAt(0)}${pen.who.slice(1).toLowerCase()} drawing`;
+    $('drawing').append(s);
+  }
+  if (drawing.length) setTimeout(redraw, 250);
+}
+
+// -- drawing with a finger (or a mouse) --------------------------------------------------------------------------
+function cellAt(ev) {
+  const r = board.getBoundingClientRect();
+  return [Math.max(0, Math.min(W - 1, Math.floor((ev.clientX - r.left) / r.width * W))),
+          Math.max(0, Math.min(H - 1, Math.floor((ev.clientY - r.top) / r.height * H)))];
+}
+function between(a, b) {            // every dot on the way from a to b, so a quick finger leaves no gaps
+  const out = []; let [x0, y0] = a; const [x1, y1] = b;
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy;
+  for (;;) { out.push([x0, y0]); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
+  return out;
+}
+function add(cells) {
+  for (const [x, y] of cells) { dot(grid, x, y, colour, size); line.p.push(x, y); }
+  redraw();
+}
+board.addEventListener('pointerdown', (ev) => {
+  if ($('ask').classList.contains('on')) return;
+  ev.preventDefault(); board.setPointerCapture(ev.pointerId);
+  line = { id: ++lineId, c: colour, w: size, p: [] }; outbox.push(line);
+  last = cellAt(ev); add([last]);
+});
+board.addEventListener('pointermove', (ev) => {
+  if (!line) return;
+  const c = cellAt(ev);
+  if (c[0] === last[0] && c[1] === last[1]) return;
+  add(between(last, c).slice(1)); last = c;
+});
+const end = () => { if (line) { line.e = 1; line = null; flush(); } };
+board.addEventListener('pointerup', end); board.addEventListener('pointercancel', end);
+
+// -- the tools ---------------------------------------------------------------------------------------------------
+const pal = $('pal');
+for (let c = 1; c < PAL.length; c++) {
+  const b = document.createElement('button'); b.type = 'button'; b.style.background = PAL[c]; b.dataset.c = c;
+  b.title = NAMES[c]; b.setAttribute('aria-label', NAMES[c]); if (c === 1) b.classList.add('sel'); pal.append(b);
+}
+const er = document.createElement('button'); er.type = 'button'; er.className = 'eraser'; er.dataset.c = 0; er.title = 'Rub out'; er.setAttribute('aria-label', 'Rub out');
+er.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19.5L4.3 14.8a1.6 1.6 0 010-2.3l8.2-8.2a1.6 1.6 0 012.3 0l4.9 4.9a1.6 1.6 0 010 2.3L12 19.5z"/><path d="M8.2 8.6l7.2 7.2"/></svg>';
+pal.append(er);
+pal.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  colour = +b.dataset.c; pal.querySelectorAll('button').forEach((x) => x.classList.toggle('sel', x === b));
+});
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  size = +b.dataset.size; document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+}));
+let toastAt = 0;
+function toast(s) { $('toast').textContent = s; const at = toastAt = Date.now(); setTimeout(() => { if (toastAt === at) $('toast').textContent = ''; }, 5000); }
+$('undo').addEventListener('click', () => { flush(); send({ t: 'undo' }); });
+$('clear').addEventListener('click', () => { $('ask').classList.add('on'); $('keepit').focus(); });
+$('keepit').addEventListener('click', () => $('ask').classList.remove('on'));
+$('clearit').addEventListener('click', () => { $('ask').classList.remove('on'); flush(); send({ t: 'clear' }); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('ask').classList.remove('on'); });
+// (a page in its box can't submit a form: the Add button, and Enter in the box, do it)
+function addWords() {
+  const v = $('textin').value.trim(); if (!v) return;
+  flush(); if (send({ t: 'text', s: v.slice(0, 60), c: colour || 1 })) { $('textin').value = ''; toast("Added in the Matrix's own letters. Draw round it if you like."); }
+}
+$('add').addEventListener('click', addWords);
+$('textin').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addWords(); } });
+$('send').addEventListener('click', () => { flush(); send({ t: 'send' }); });
+
+// -- the history -------------------------------------------------------------------------------------------------
+let history = [];
+function showHistory() {
+  const box = $('hist'); box.innerHTML = '';
+  if (!history.length) { box.innerHTML = '<span class="empty">Nothing sent yet.</span>'; return; }
+  for (const h of history) {
+    if (!h) continue;
+    const b = document.createElement('button'); b.type = 'button'; b.title = `${h.who || 'Someone'}, ${h.when}: put it back on the wall`;
+    const c = document.createElement('canvas'); c.width = h.w; c.height = h.h; const x = c.getContext('2d'), im = x.createImageData(h.w, h.h);
+    const g = decode(h.g, h.w * h.h);
+    for (let i = 0; i < g.length; i++) { const p = g[i] ? PAL[g[i]] : '#0C0D0F'; im.data.set([parseInt(p.slice(1, 3), 16), parseInt(p.slice(3, 5), 16), parseInt(p.slice(5, 7), 16), 255], i * 4); }
+    x.putImageData(im, 0, 0); c.style.width = `${Math.round(42 * h.w / h.h)}px`;
+    const s = document.createElement('span'); s.textContent = `${h.who || ''} ${h.when}`.trim();
+    b.append(c, s);
+    b.addEventListener('click', () => { flush(); send({ t: 'back', id: h.id }); });
+    box.append(b);
+  }
+}
+
+// -- what the module says ----------------------------------------------------------------------------------------
+function heard(m) {
+  if (m.t === 'all') {
+    resize(m.w, m.h);
+    if (m.y === 0) incoming = new Uint8Array(W * H);
+    if (!incoming) return;
+    incoming.set(decode(m.g, m.n * W), m.y * W);
+    if (m.y + m.n >= H) {                          // the whole wall: it, and then what this phone hasn't sent yet
+      grid = incoming; incoming = null;
+      for (const part of outbox) for (let k = 0; k < part.p.length; k += 2) dot(grid, part.p[k], part.p[k + 1], part.c, part.w);
+      redraw();
+    }
+    pop = !!m.pop;
+    $('sendsmall').textContent = pop ? 'Keeps it in the history, and pops it up on the panel' : 'Keeps it in the history';
+    if (m.me) { myColour = m.me.pc; $('mydot').style.background = PAL[myColour]; }
+  } else if (m.t === 'd') {
+    for (const part of m.l) {
+      for (let k = 0; k < part.p.length; k += 2) dot(grid, part.p[k], part.p[k + 1], part.c, part.w);
+      if (me && part.by !== me.device && part.p.length) pens[part.by] = { x: part.p[part.p.length - 2], y: part.p[part.p.length - 1], who: part.who, pc: part.pc, w: part.w, at: performance.now() };
+    }
+    redraw();
+  } else if (m.t === 'hist') {
+    if (m.from === 0) history = new Array(m.of).fill(null);
+    m.items.forEach((h, k) => { history[m.from + k] = h; });
+    history.length = m.of;
+    showHistory();
+  } else if (m.t === 'here') {
+    here = m.names; showHere();
+  } else if (m.t === 'said') {
+    toast(m.s);
+  }
+}
+addEventListener('message', (e) => {
+  const m = e.data || {};
+  if (m.type === 'hello') { me = m.me; showHere(); $('me').innerHTML = ''; const b = document.createElement('b'); b.textContent = me.name; $('me').append("You're ", b); }
+  else if (m.type === 'message' && m.data && typeof m.data === 'object') heard(m.data);
+  else if (m.type === 'slow') toast('Slow down a little: some of that was dropped.');
+  else if (m.type === 'off') document.body.classList.add('is-off');
+});
+fit(); redraw();
+</script>
+</body>
+</html>

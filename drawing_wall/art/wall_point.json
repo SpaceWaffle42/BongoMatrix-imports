@@ -1,0 +1,4 @@
+{"format":"bongo-animation","version":1,"name":"wall_point","width":3,"height":3,"background":"#000000","loop":"loop","palette":["#555350","#f2eee6"],"layers":[{"name":"Point","on":true,"opacity":1,"mode":"normal","shared":false}],"frames":[
+{"ms":125,"cels":[". 0 . 0 1 0 . 0 ."]},
+{"ms":125,"cels":["9*."]}
+]}

@@ -1,0 +1,51 @@
+{
+  "id": "phone_notifications",
+  "name": "Phone notifications",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Notifications from your phone: a short pop-up over the playlist, and the last few on a screen. Your phone sends them through ntfy.sh.",
+  "network": ["ntfy.sh"],
+  "api": 3,
+  "abilities": {
+    "background": true,
+    "controls": ["status", "message"],
+    "settings": {
+      "fields": [
+        {"name": "topic", "type": "text", "label": "Topic name",
+         "note": "The private name your phone sends to. Leave it empty and one is made for you, shown once in the line below. Letters, numbers, - and _ (up to 64)."},
+        {"name": "token", "type": "text", "label": "Access token (optional)",
+         "note": "Only if you reserved the topic on an ntfy.sh account: a token from there (tk_...)."},
+        {"name": "show", "type": "choice", "label": "On the panel, show",
+         "choices": ["Only who it's from", "Who and the text", "Only the kind of app"], "default": "Only who it's from",
+         "note": "For pop-ups and screens. To keep the text off ntfy.sh too, leave it out on the phone (see the setup steps)."},
+        {"name": "gap", "type": "choice", "label": "Pop-ups at most every",
+         "choices": ["2 minutes", "5 minutes", "15 minutes", "30 minutes"], "default": "2 minutes",
+         "note": "Any that come in between wait, then pop up together (\"3 new\")."},
+        {"name": "quiet_hours", "type": "text", "label": "Quiet hours", "max": 30,
+         "note": "No pop-ups then, like 21:30-07:00 (empty: none). Never in the sleep hours either. They still go in the list."},
+        {"name": "keep", "type": "int", "label": "Keep the last", "limits": [1, 20], "default": 8,
+         "note": "How many the screens list. Each is forgotten a day after it came."},
+        {"name": "messages", "type": "choice", "label": "Messages",
+         "choices": ["Show and pop up", "Show, no pop-up", "Don't show"], "default": "Show and pop up"},
+        {"name": "calls", "type": "choice", "label": "Calls",
+         "choices": ["Show and pop up", "Show, no pop-up", "Don't show"], "default": "Show and pop up"},
+        {"name": "deliveries", "type": "choice", "label": "Deliveries",
+         "choices": ["Show and pop up", "Show, no pop-up", "Don't show"], "default": "Show and pop up"},
+        {"name": "email", "type": "choice", "label": "Email",
+         "choices": ["Show and pop up", "Show, no pop-up", "Don't show"], "default": "Show, no pop-up"},
+        {"name": "other_apps", "type": "choice", "label": "Calendar and other apps",
+         "choices": ["Show and pop up", "Show, no pop-up", "Don't show"], "default": "Show, no pop-up"},
+        {"name": "summary", "type": "bool", "label": "Sum up after quiet hours", "default": true,
+         "note": "One pop-up when quiet or sleep hours end, saying how many came (\"5 while quiet\"). Off: they're just in the list."}
+      ],
+      "table": {"title": "Kinds, and the tag the phone sends", "rows": [
+        ["Messages: texts and chat apps", "message"],
+        ["Calls: missed calls (Android)", "call"],
+        ["Deliveries: a courier's app or texts", "delivery"],
+        ["Email", "email"],
+        ["Calendar alerts", "calendar"],
+        ["Anything else: tag it with the app's name", "other"]]},
+      "note": "Your phone sends to ntfy.sh, a free public relay, and this module listens there. Treat the topic name like a password: anyone who has it can read what you send and post onto your panel. The list is kept only on this Matrix, never in a backup. Pop-ups never come in the sleep hours."
+    }
+  }
+}

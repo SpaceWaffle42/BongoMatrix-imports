@@ -1,0 +1,91 @@
+{
+  "id": "drawing_wall",
+  "name": "Drawing wall",
+  "version": "1.0.0",
+  "author": "spacewaffle42",
+  "description": "Draw on the panel from your phone, live: several phones at once, a history of the last few, and a pop-up when one is sent if you like.",
+  "api": 3,
+  "abilities": {
+    "background": true,
+    "stay": true,
+    "controls": [
+      "status",
+      "message"
+    ],
+    "page": {
+      "file": "page.html",
+      "title": "Drawing wall"
+    },
+    "address": true,
+    "settings": {
+      "fields": [
+        {
+          "name": "start",
+          "type": "choice",
+          "label": "When someone starts drawing",
+          "choices": [
+            "Show it straight away",
+            "Wait for its turn"
+          ],
+          "default": "Show it straight away",
+          "note": "Straight away: the wall cuts in and stays while dots keep coming, until 8 s after the last one. Never in the sleep hours or while paused."
+        },
+        {
+          "name": "popup",
+          "type": "choice",
+          "label": "Pop-up when a drawing is sent",
+          "choices": [
+            "Off",
+            "On, for 5 seconds",
+            "On, for 10 seconds",
+            "On, for 15 seconds",
+            "On, for 20 seconds",
+            "On, for 30 seconds"
+          ],
+          "default": "Off",
+          "note": "The drawing cuts in over whatever's on, for that long. Never in the sleep hours."
+        },
+        {
+          "name": "keep",
+          "type": "int",
+          "label": "Drawings kept in the history",
+          "limits": [
+            1,
+            12
+          ],
+          "default": 5,
+          "note": "The oldest goes when a new one is sent."
+        },
+        {
+          "name": "clear_by_itself",
+          "type": "choice",
+          "label": "Clear the wall by itself",
+          "choices": [
+            "Never",
+            "Every night at midnight",
+            "A day after the last drawing"
+          ],
+          "default": "Never",
+          "note": "A drawing that was never sent is kept in the history first."
+        },
+        {
+          "name": "when_empty",
+          "type": "choice",
+          "label": "When the wall is empty",
+          "choices": [
+            "Skip its screen",
+            "Show \"Draw on me\""
+          ],
+          "default": "Skip its screen"
+        },
+        {
+          "name": "show_who",
+          "type": "bool",
+          "label": "Show who drew it",
+          "default": true
+        }
+      ],
+      "note": "Anyone with a paired phone or computer can draw: Open Drawing wall, above, or from its row in Modules. Cutting in and pop-ups never come in the sleep hours or while the panel is paused, and the Matrix allows a module 10 pop-ups in ten minutes: past that, the wall waits for its turn in the playlist."
+    }
+  }
+}
