@@ -61,10 +61,10 @@ playlist, and open the page from **Open Drawing wall** on its row in **Settings 
 | Drawings kept in the history | 5 | 1 to 12. The oldest goes when a new one is sent. |
 | Clear the wall by itself | Never | Or **Every night at midnight**, or **A day after the last drawing**. A drawing that was never sent is kept in the history first. |
 | When the wall is empty | Skip its screen | Or **Show "Draw on me"**. |
-| Show who drew it | on | The name each browser was paired with ("Billy's phone" shows as BILLY), on the panel for a moment. |
+| Show who drew it | on | The name each browser was paired with ("Sam's phone" shows as SAM), on the panel for a moment. |
 
 Who may draw isn't a setting: it's every paired browser, as for the rest of the dashboard. The line under the card
-says how things stand: `2 people drawing now · last sent 10:42 from Billy's phone · 4 in the history`.
+says how things stand: `2 people drawing now · last sent 10:42 from Sam's phone · 4 in the history`.
 
 ## How the page talks to the module
 

@@ -23,7 +23,7 @@ FILE = "wall.json"
 
 def short_name(name: str) -> str:
     """What the panel calls someone: the first word of the name their browser was paired with, without an "'s"
-    ("Billy's phone" is BILLY, "Mum" is MUM), in capitals, at most 8 letters."""
+    ("Sam's phone" is SAM, "Mum" is MUM), in capitals, at most 8 letters."""
     word = (str(name or "").split() or ["SOMEONE"])[0]
     word = re.sub(r"['’]s$", "", word, flags=re.I) or word
     return word.upper()[:8]
