@@ -96,7 +96,7 @@ that need it say so.
 | Show friends who are away | off: away friends aren't shown (unless they're in a game) |
 | Pop-up: a friend starts a game | off. On: a few seconds' message when a friend you'd see starts a game |
 
-The **status line** under it says how it's going: "Signed in as Billy · 3 friends online · checked 20 s ago", or plainly
+The **status line** under it says how it's going: "Signed in as Sam · 3 friends online · checked 20 s ago", or plainly
 what's wrong:
 
 | It says | What to do |
