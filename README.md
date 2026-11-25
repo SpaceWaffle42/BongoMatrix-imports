@@ -145,7 +145,12 @@ updates from that folder only:
    person types their own into the Matrix.
 5. **Test before pushing**: try the module on a Matrix (import it as a .zip, or by link from a branch), and run
    its own tests if it has any (see its README).
-6. **Pet art** from the main repository is never used here (its licence doesn't allow sharing it).
+6. **Licence**: everything here is under the MIT licence (`LICENSE.md`). A new module's folder gets its own copy
+   as `LICENSE`, and nothing goes in that can't be shared under it (no art, fonts or code with another licence).
 
 Large files (pictures, recordings) are fine in a module's folder, but keep a module well under the import size
 limit; the Matrix refuses an archive that's too big.
+
+## Licence
+
+MIT: see [LICENSE.md](LICENSE.md). Copyright (c) 2026 spacewaffle42.
